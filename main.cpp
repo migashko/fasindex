@@ -24,17 +24,51 @@ public:
   mmap_manager(): _fd(-1), _addr(0), _size(0)
   {
   }
-  
-  bool open(const char* path, size_t size)
+
+  template<typename T>
+  struct pointer
   {
-    struct stat sb;
-    if ( -1 == stat(path, &sb) )
-      return false;
+    mmap_manager *mmm;
+    size_t offset;
+
+    pointer(mmap_manager* mmm, size_t offset = static_cast<size_t>(-1) )
+      : mmm(mmm)
+      , offset(offset)
+    {}
+
+    pointer(mmap_manager* mmm, T* ptr )
+      : mmm(mmm)
+      , offset(mmm->offset(ptr))
+    {
+    }
+
+    T& operator*() { return *(mmm->get<T>(offset));}
+    const T& operator*() const { return *(mmm->get<T>(offset));}
+
+    T* operator->() { return mmm->get<T>(offset);}
+    const T* operator->() const { return mmm->get<T>(offset);}
+
+    void operator = ( size_t offset ) { this->offset = offset; }
+    void operator = ( T* t ) { this->offset = mmm->offset(t); }
+    operator size_t () const { return offset;}
+
+    operator bool () const { return offset != static_cast<size_t>(-1);}
+  };
+  
+  bool open(const char* path, size_t size = 0)
+  {
+    struct stat sb = { 0 };
+    stat(path, &sb);
+    /*if ( -1 == stat(path, &sb) )
+      return false;**/
     
     _fd = ::open(path, O_RDWR | O_CREAT, (mode_t)0600);
     
     if ( _fd == -1)
       return -1;
+
+    if ( size < sb.st_size)
+      size = sb.st_size;
     
     if ( size > sb.st_size )
     {
@@ -42,7 +76,7 @@ public:
       write(_fd, "", 1);
     }
     
-    _addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
+    _addr = (char*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
     
     if (_addr == MAP_FAILED)
     {
@@ -68,7 +102,7 @@ public:
     {
       // TODO: урезать файл
     }
-    _addr = mremap( _addr, _size, size, MREMAP_MAYMOVE);
+    _addr = (char*)mremap( _addr, _size, size, MREMAP_MAYMOVE);
     _size = size;
     if ( _addr == (void*)(-1) )
       throw;
@@ -76,7 +110,21 @@ public:
   
   size_t size() const { return _size; }
   
-  void *addr() const { return _addr;}
+  char *addr() const { return _addr;}
+
+  template<typename T>
+  T* get(size_t offset) const
+  {
+    return reinterpret_cast<T*>(_addr + offset);
+  }
+
+  template<typename T>
+  size_t offset(T* p)
+  {
+    if ( p==0 )
+      return static_cast<size_t>(-1);
+    return reinterpret_cast<char*>(p) - _addr;
+  }
   
   operator bool () const 
   {
@@ -84,13 +132,243 @@ public:
   }
 private:
   int _fd;
-  void *_addr;
+  char *_addr;
   size_t _size;
 };
+
+
+template<typename T>
+struct chunk
+{
+  size_t bits;
+  T data[sizeof(size_t)*8];
+
+  chunk(): bits(0) {}
+
+  bool filled() const {
+    return bits == static_cast<size_t>(-1);
+  }
+  bool empty() const  { return bits == 0; }
+  
+  size_t max_count() const { return sizeof(size_t)*8; }
+  size_t size() const { return sizeof(this); /*+ sizeof(T)*max_count();*/ }
+
+  void clear() { bits = 0; }
+  
+  size_t first_free()
+  {
+    /// биты c права на лево
+    /// 000000000 000000000 000000000 000000000 000000000 000000000 000000000 000000001
+    /// Первый элемент свободен
+    for ( size_t i = 0; i < sizeof(size_t)*8; ++i )
+      if ( ! ( bits & ( static_cast<size_t>(1) << i) ) )
+        return i;
+    return static_cast<size_t>(-1);
+        
+    /*
+var
+  x     : integer;
+  index : word;
+begin
+  x := 44; //101100b
+  asm
+    bsf   ax, x
+    mov   index, ax  //index = 2 (биты нумеруются с 0)
+  end;
+end;
+*/
+  }
+
+  T* begin()
+  {
+    return data;
+  }
+
+  T* mark()
+  {
+    size_t index = first_free();
+    if ( index == static_cast<size_t>(-1) )
+      return 0;
+    return mark(index);
+  }
+
+  T* mark(size_t index)
+  {
+    size_t oldbit = bits;
+    bits |= ( static_cast<size_t>(1) <<  index );
+    
+    return begin() + index;
+  }
+
+  void free(T* addr)
+  {
+    size_t index = addr - begin();
+    bits &= ~(1<<index);
+  }
+};
+
+template<typename T>
+struct chain
+{
+  typedef chunk<T> chunk_type;
+  size_t size;
+  size_t first_free;
+  chain(): size(0), first_free(0) {}
+
+  void acquire(size_t count) { size += count;} 
+  chunk_type* begin()
+  {
+    return reinterpret_cast<chunk_type*>(this+1);
+  }
+
+  size_t chunk_size() const { return sizeof(chunk_type); }
+
+  chunk_type* find_free()
+  {
+    
+    chunk_type* beg = begin();
+    chunk_type* end = beg + size;
+
+    if ( beg!=end && !( beg + first_free)->filled() )
+      return beg + first_free;
+
+    
+    for ( ;beg!=end; ++beg)
+    {
+      
+      if ( !beg->filled() )
+      {
+        first_free = beg - begin();
+        
+        return beg;
+      }
+    }
+    
+    return 0;
+  }
+
+  T* mark()
+  {
+    if ( chunk_type* chk = find_free() )
+      return chk->mark();
+    return 0;
+  }
+
+  void free(T* value)
+  {
+    size_t offset = value - this->begin()->begin();
+    offset -= offset%sizeof(chunk_type);
+    chunk_type* chk = begin() + offset;
+    chk->free(value);
+    if ( offset < first_free )
+      first_free = offset;
+  }
+};
+
+
+template<typename T, typename M = mmap_manager>
+class allocate_manager
+{
+public:
+  typedef M memory_manager;
+  typedef chunk<T> chunk_type;
+  typedef chain<T> chain_type;
+  typedef typename memory_manager::template pointer<T> pointer;
+
+  allocate_manager(memory_manager* mm)
+    : _memory_manager(mm)
+  {}
+
+  bool acquire()
+  {
+    size_t offset = _memory_manager->size();
+    _memory_manager->resize( offset + sizeof(chain_type) + sizeof(chunk_type) );
+    char *addr = _memory_manager->addr();
+    chain_type* ch = 0;
+    if ( offset == 0 )
+      ch = new (addr) chain_type;
+    else
+      ch =reinterpret_cast<chain_type*>(addr);
+    ch->acquire(1);
+    new (addr+offset)chunk_type;
+    return true;
+    /*char *addr = _memory_manager->addr() + offset;
+    if ( offset == 0 )
+    {
+      chain_type* ch = new (addr)chain_type;
+      addr+=sizeof(chain_type);
+    }
+    new (addr)chunk_type;*/
+  }
+
+  pointer allocate()
+  {
+    if ( _memory_manager->size() == 0 )
+      this->acquire();
+
+    chain_type* chn = (chain_type*)_memory_manager->addr();
+    pointer p( _memory_manager );
+    p = chn->mark();
+    if (!p)
+    {
+      acquire();
+      chn = (chain_type*)_memory_manager->addr();
+      p = chn->mark();
+      if (!p)
+        std::cout << "realloc fail!!!" << std::endl;
+    }
+    return p;
+    
+    
+    /*if ( _memory_manager->size() == 0 )
+    {
+      _memory_manager->resize( sizeof(chain_type) );
+      chain_type* chn = (chain_type*)_memory_manager->addr();
+      chn->size = 0;
+      chn->first_free = 0;
+    }*/
+    
+    /*chain_type* chn = (chain_type*)_memory_manager->addr();
+    return pointer( _memory_manager, chn->mark() );*/
+  }
+
+  void deallocate(pointer ptr)
+  {
+    chain_type* chn = (chain_type*)_memory_manager->addr();
+    chn->free(ptr);
+  }
+  
+private:
+  
+  memory_manager* _memory_manager;
+  
+};
+
+struct array_size
+{
+  size_t size;
+  array_size():size(0) {}
+  array_size(size_t size):size(size) {}
+};
+
+template<typename T, size_t N>
+struct array
+  : array_size
+  , std::array<T, N>
+{
+public:
+  
+  
+};
+
+
+
 
 template<typename T>
 struct mmap_allocator
 {
+  typedef chunk<T> chunk_type;
+  
   typedef T value_type;
   typedef T* pointer;
   typedef T& reference;
@@ -98,26 +376,105 @@ struct mmap_allocator
   typedef const T& const_reference;
   typedef size_t size_type;
   typedef std::ptrdiff_t difference_type;
+
+  enum { data_block_size = sizeof(T)*sizeof(size_t) };
+  enum { block_size = sizeof(size_t) + data_block_size };
   
-  enum { block_size = sizeof(T)*sizeof(size_t) };
+  //rebind
+  template <typename U>
+  struct rebind {
+    typedef mmap_allocator <U> other;
+  };
+
+  pointer address (reference value ) const { return &value; }
+
+  const_pointer address (const_reference value) const { return &value; }
   
   mmap_manager& _mmm;
   
-  mmap_allocator(mmap_manager& mmm): _mmm(mmm)
+  mmap_allocator(mmap_manager& mmm): _mmm(mmm) { }
+
+  size_type max_size () const throw() { return ::std::numeric_limits <size_type>::max() / sizeof(T); }
+
+  void* _add_block()
   {
+    size_t size = _mmm.size();
+    _mmm.resize(size + block_size);
+    // Обнуляем биты выделения
+    *( reinterpret_cast<size_t *>( reinterpret_cast<const char *>(_mmm.addr() ) + size  ) ) = 0;
   }
-  
-  
+
+  //pointer _allocate( char *block,  )
+
+  pointer allocate (size_type num, void *  hint = 0)
+  {
+    size_t size = 0;
+    /*
+    if ( _mmm.size() < block_size + sizeof(size_t) )
+    {
+      _mmm.resize(block_size + sizeof(size_t));
+    }
+    const char *beg = reinterpret_cast<const char *>(_mmm.addr());
+    size_t *bits = reinterpret_cast<size_t *>( beg );
+    beg += sizeof(size_t);
+    */
+    
+    /*
+      pointer p = (pointer) ::mmap(hint, num, PROT_READ | PROT_WRITE, MAP_ANON, -1, 0);
+      int * val = (int *)p;
+      if(val && *val == -1)
+        p = NULL;
+      return p;
+    */
+  }
+
+  void construct (pointer p, const_reference value)
+  {
+      new((void *)p) T(value);  //placement new
+  }
+
+  void destroy (pointer p)
+  {
+    p->~T();
+  }
+
+  void deallocate (pointer p, size_type num)
+  {
+      ::munmap((caddr_t) p, num);
+  }
+    
+  /*
   size_t restore(T*** result) const
   {
     if ( _mmm.size() < sizeof(size_t) )
       return 0;
-    void *addr = _mmm.addr();
+    char *addr = reinterpret_cast<char*>( _mmm.addr() );
+    // Количество выделенных ненулквых элементов 
     size_t size = *(reinterpret_cast<size_t*>(addr));
+    addr += sizeof(size);
     if (size == 0)
       return 0;
-    *result = new T*[size];
-  }
+    // *result = new T*[size];
+
+    size_t ipos = 0;
+    for ( size_t i = 0; i < size; ++i)
+    {
+      // Маска на блок 64*sizeof(T)
+      size_t bits = *(reinterpret_cast<size_t*>(addr));
+      addr += sizeof(size);
+      char *next = addr + sizeof(size)*sizeof(T);
+      for (size_t b=0; b < sizeof(size_t); ++b )
+      {
+        if (bits & (1<<b) )
+          result[ipos] = new (addr)T;
+        addr+= sizeof(T);
+        ++ipos;
+      }
+      addr+=next;
+    }
+}
+    */
+  
   
   operator bool () const { return _mmm; }
   
@@ -125,7 +482,7 @@ private:
  
 };
 
-template<size_t N, typename Allocator = std::allocator<size_t> >
+template<size_t N, typename Allocator = std::allocator<size_t*> >
 class big_bitset
 {
 public:
@@ -145,11 +502,11 @@ public:
     _bitset = _allocator.allocate(bitset_count);
   }
   
-  bool operator[] ( size_type i ) const { return _bitset[i/sizeof(size_type)] & (1 << i%sizeof(size_type)); }
+  bool operator[] ( size_type i ) const { return (*_bitset)[i/sizeof(size_type)] & (1 << i%sizeof(size_type)); }
   
   void set(size_type i)
   {
-    _bitset[i/sizeof(size_type)] |= (1 << i%sizeof(size_type));
+    (*_bitset)[i/sizeof(size_type)] |= (1 << i%sizeof(size_type));
   }
   
   allocator_type get_allocator() const
@@ -158,7 +515,7 @@ public:
   }
   
 private:
-  size_type* _bitset;
+  size_type** _bitset;
   allocator_type _allocator;
 };
 
@@ -344,19 +701,54 @@ private:
   size_type _size;
 };
 
+#include <array>
 int main()
 {
   mmap_manager mmm;
-  mmm.open("./mmap_manager.bin", 1111);
+  mmap_manager::pointer<int> value(&mmm);
+  if ( !mmm.open("./mmap_manager.bin") )
+    std::cout << "fuck1" << std::endl;
   if (!mmm)
-    std::cout << "fuck" << std::endl;
-  //mmm.resize(5000);
+    std::cout << "fuck2" << std::endl;
+  std::cout << "OK" << std::endl;
+
+
+  
+
+  
+  typedef chunk<int> chunk_type;
+  typedef chain<int> chain_type;
+  /*std::cout << sizeof (size_t) << std::endl;
+  std::cout << sizeof (chunk_type) << std::endl;
+  */
+  size_t fullsize = sizeof(chain_type) + 10 * ( sizeof(chain_type) + sizeof(int)*64 );
+  
+  //mmm.resize( fullsize );
+  /*chain_type* chn = (chain_type*)mmm.addr();
+  chn->size = 10;
+  chn->first_free = 0;
+  */
+  allocate_manager<int, mmap_manager> am(&mmm);
+
+  for (int i = 0 ; i < 19600; ++i)
+  {
+    std::cout << i << std::endl;
+    /*int* pvalue = chn->mark();
+    value = pvalue;
+    */
+    value = am.allocate();
     
+    if ( value )
+      *value = /*0x0A0B0C0D*/i;
+    else
+      std::cout << "NULL" << std::endl;
+  }
     
+  return 0;  
     
   mmap_allocator<int> mma(mmm);
   int **ii;
-  mma.restore(&ii);
+  //mma.restore(&ii);
   return 0;
   
   std::bitset<1024> myset;
