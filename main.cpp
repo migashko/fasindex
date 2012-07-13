@@ -55,13 +55,15 @@ protected:
 };
 
   template<typename T>
-  struct offset_pointer;
-
-  template<typename T>
   struct offset_pointer
   {
     mmap_base *mmm;
     size_t offset;
+
+    offset_pointer()
+      : mmm(0)
+      , offset(static_cast<size_t>(-1))
+    { }
 
     offset_pointer(mmap_base* mmm, size_t offset = static_cast<size_t>(-1) )
       : mmm(mmm)
@@ -450,7 +452,7 @@ struct the_allocator
   void deallocate (pointer p, size_type num)
   {
     //if (num!=1) throw;
-    _mmm->allocate(p);
+    _mmm->deallocate(p);
   }
     
   
@@ -488,8 +490,9 @@ public:
 
   size_type size() const { return _size;}
   size_type max_size() const { return N;}
-  size_type capacity () const { return N;}
+  size_type capacity() const { return N;}
   bool empty () const {return _size==0;}
+  bool filled () const { return _size == N;}
   void resize ( size_type sz, T value = value_type() ) 
   {
     if (sz > _size)
@@ -508,6 +511,8 @@ public:
   const_iterator begin() const { return _data;}
   iterator end() { return _data + _size;}
   const_iterator end() const { return _data + _size;}
+  iterator last() { return _data + _size - 1;}
+  const_iterator last() const { return _data  + _size - 1;}
   
   
   template <class InputIterator>
@@ -560,6 +565,84 @@ private:
   data_type _data;
 };
 
+template<typename T, int N1, int N2, typename A1 = the_allocator< array<T,N1> >, typename A2 = the_allocator< array<size_t, N2> > >
+class vector_list
+{
+public:
+  typedef T value_type;
+  typedef A1 value_allocator;
+  typedef A2 index_allocator;
+
+  typedef typename index_allocator::pointer index_pointer;
+  typedef typename value_allocator::pointer value_pointer;
+  
+  
+  typedef std::vector<index_pointer> index_list;
+  typedef typename index_list::iterator index_list_iterator;
+  
+  vector_list(value_allocator a1, index_allocator a2 )
+    : _value_allocator(a1)
+    , _index_allocator(a2)
+  {
+    // value_allocator::pointer value_ptr = _value_allocator.allocate();
+    
+    
+  }
+
+  void push_back( const T& x )
+  {
+    std::cout << "push_back " << x.index  << std::endl;
+    index_list_iterator last_index = _last_index();
+
+    _value_pointer = *((*last_index)->last());
+
+    if (  _value_pointer->filled() )
+    {
+      if ( (*last_index)->filled() )
+      {
+        std::cout << "create new chunk index" << std::endl;
+        _index_pointer = _index_allocator.allocate(1);
+        std::cout << "create new chunk data" << std::endl;
+        _value_pointer = _value_allocator.allocate(1);
+        _index_pointer->push_back( _value_pointer );
+        _index_list.push_back( _index_pointer );
+        last_index = _last_index();
+      }
+      else
+      {
+        std::cout << "create new chunk data" << std::endl;
+        _value_pointer = _value_allocator.allocate(1);
+        _value_allocator.construct(_value_pointer, typename value_allocator::value_type() );
+        _index_pointer->push_back(_value_pointer);
+      }
+    }
+
+    _value_pointer->push_back(x);
+    
+  }
+  
+protected:
+  index_list_iterator _last_index()
+  {
+    if ( _index_list.empty() )
+    {
+      //std::cout << "create first chunk index" << std::endl;
+      _index_pointer = _index_allocator.allocate(1);
+      //std::cout << "create first chunk data" << std::endl;
+      _value_pointer = _value_allocator.allocate(1);
+      _index_pointer->push_back( _value_pointer );
+      _index_list.push_back( _index_pointer );
+    }
+    return (++_index_list.rbegin()).base();
+  }
+
+private:
+  index_list      _index_list;
+  index_allocator _index_allocator;
+  value_allocator _value_allocator;
+  index_pointer _index_pointer;
+  value_pointer _value_pointer;
+};
 
 
 
@@ -901,24 +984,53 @@ private:
 };
 
 #include <array>
+
+struct data
+{
+  data(): index() { std::fill_n(buffer, 8, 0xABABABABABABABAB); }
+  int index;
+  size_t buffer[8];
+};
 int main()
 {
-  mmap_manager mmm;
+  mmap_manager mmm, mmm2;
   
-  if ( !mmm.open("./mmap_manager.bin",1024 * 1024 * 10 * 4 + 1024*1024) )
+  if ( !mmm.open("./data.bin", 1024) )
     std::cout << "fuck1" << std::endl;
   if (!mmm)
     std::cout << "fuck2" << std::endl;
+
+  if ( !mmm2.open("./index.bin", 1024) )
+    std::cout << "fuck1" << std::endl;
+  if (!mmm2)
+    std::cout << "fuck2" << std::endl;
+
   std::cout << "OK" << std::endl;
+
+  /*allocate_manager<int> am1((&mmm));
+  allocate_manager<int> am2((&mmm2));*/
   
-  allocate_manager<int> am1((&mmm));
-  the_allocator<int> alloca = the_allocator<int>(am1); 
+  //the_allocator<int> alloca = the_allocator<int>(am1);
+
+  typedef vector_list<data, 4096, 4096> vector_type;
   
-  for ( size_t i=0 ; i < 1024 * 1024 * 10 ; i++)
+  typedef vector_type::index_allocator index_allocator;
+  typedef vector_type::value_allocator value_allocator;
+
+  allocate_manager<value_allocator::value_type> am1((&mmm));
+  allocate_manager<index_allocator::value_type> am2((&mmm2));
+
+  vector_type vv(am1, am2);
+
+  data d;
+  for ( size_t i=0 ; i < 1024 *  1024 /** 1024*/; i++)
   {
-    the_allocator<int>::pointer ptr = alloca.allocate(1);
-    *ptr = i;
+    d.index = i;
+    vv.push_back(d);
   }
+
+  
+  
   
   return 0;
   /*
