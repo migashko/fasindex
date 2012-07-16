@@ -6,6 +6,11 @@
 #include "array.hpp"
 #include "vector_list_iterator.hpp"
 
+// TODO: pair< size_t, array<size_t, N2> >
+
+
+
+
 template<typename T, int N1, int N2, typename A1 = managed_allocator< array<T,N1> >, typename A2 = managed_allocator< array<size_t, N2> > >
 class vector_list
 {
@@ -25,8 +30,8 @@ public:
   typedef typename fas::typerange< array<size_t, N2> >::range index_range;
   typedef typename fas::typerange< array<T,N1> >::range value_range;
   
-  typedef vector_list_iterator<index_list_range, index_range, value_range> iterator;
-  typedef vector_list_iterator<const index_list_range, const index_range, const value_range> const_iterator;
+  typedef vector_list_iterator<index_list_range, index_range, value_range, value_pointer> iterator;
+  typedef vector_list_iterator<const index_list_range, const index_range, const value_range, const value_pointer> const_iterator;
   
   //typedef vector_list_iterator<>
   
@@ -42,11 +47,25 @@ public:
     _index_pointer = *(_index_list.begin());
     _value_pointer = *(_index_pointer->begin());
     return iterator( 
-      fas::range(_index_list), 
-      fas::range( *_index_pointer ), 
-      fas::range( _value_pointer->begin(), _value_pointer->end() )
+      index_list_range(_index_list.begin(), _index_list.end() ),
+      index_range( _index_pointer->begin(), _index_pointer->end() ),
+      value_range( _value_pointer->begin(), _value_pointer->end() ),
+      _value_pointer
     );
   }
+
+  /*
+  iterator end()
+  {
+    _index_pointer = *(_index_list.begin());
+    _value_pointer = *(_index_pointer->begin());
+    return iterator(
+      fas::erange(_index_list),
+      fas::erange( *_index_pointer ),
+      fas::range( _value_pointer->end(), _value_pointer->end() )
+    );
+  }
+  */
 
   void push_back( const T& x )
   {
@@ -57,7 +76,9 @@ public:
       if ( (*last_index)->filled() )
       {
         _index_pointer = _index_allocator.allocate(1);
+        _index_allocator.construct(_index_pointer, typename index_allocator::value_type() );
         _value_pointer = _value_allocator.allocate(1);
+        _value_allocator.construct(_value_pointer, typename value_allocator::value_type() );
         _index_pointer->push_back( _value_pointer );
         _index_list.push_back( _index_pointer );
         last_index = _last_index();
@@ -93,7 +114,7 @@ private:
   index_list      _index_list;
   index_allocator _index_allocator;
   value_allocator _value_allocator;
-  index_pointer _index_pointer;
-  value_pointer _value_pointer;
+  index_pointer   _index_pointer;
+  value_pointer   _value_pointer;
 };
 #endif

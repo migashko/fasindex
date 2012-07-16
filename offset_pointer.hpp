@@ -7,8 +7,13 @@ struct offset_pointer
   typedef offset_pointer<T, M> self;
   M *mmm;
   size_t offset;
-  typedef T& reference;
-  typedef std::ptrdiff_t difference_type;
+
+  typedef typename std::iterator_traits<T*>::iterator_category iterator_category;
+  typedef typename std::iterator_traits<T*>::value_type        value_type;
+  typedef typename std::iterator_traits<T*>::difference_type   difference_type;
+  typedef typename std::iterator_traits<T*>::pointer           pointer;
+  typedef typename std::iterator_traits<T*>::reference         reference;
+
   
 
   offset_pointer()
