@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 
-
+/// TODO: проверки за выход диапазона 
 template<typename T, size_t N>
 class array
 {
@@ -88,6 +88,7 @@ public:
     std::copy_backward(position, end(), end()+1);
     *position = x;
     ++_size;
+    return position;
   }
   
   void insert ( iterator position, size_type n, const T& x )

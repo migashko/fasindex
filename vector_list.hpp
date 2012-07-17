@@ -8,13 +8,39 @@
 
 // TODO: pair< size_t, array<size_t, N2> >
 
+struct last_index_holder
+{
+  // на самом деле last_index + 1
+  size_t last_index;
+};
+
+template<typename T, int N>
+struct last_index_array
+  : last_index_holder
+  , array<T, N>
+{};
+
+/**
+ * @tparam T 
+ */
+template<typename T, typename P, typename A>
+class array_of_array
+{
+public:
+public:
+};
 
 
 
-template<typename T, int N1, int N2, typename A1 = managed_allocator< array<T,N1> >, typename A2 = managed_allocator< array<size_t, N2> > >
+template<
+  typename T, int N1, int N2,
+  typename A1 = managed_allocator< last_index_array<T,N1> >,
+  typename A2 = managed_allocator< last_index_array<size_t, N2> >
+>
 class vector_list
 {
 public:
+  typedef vector_list<T, N1, N2, A1, A2> self;
   typedef T value_type;
   typedef A1 value_allocator;
   typedef A2 index_allocator;
@@ -29,24 +55,39 @@ public:
   typedef typename fas::typerange<index_list>::range index_list_range;
   typedef typename fas::typerange< array<size_t, N2> >::range index_range;
   typedef typename fas::typerange< array<T,N1> >::range value_range;
+
+  typedef offset_iterator<T, self> iterator;
+  typedef offset_iterator<const T, self> const_iterator;
   
-  typedef vector_list_iterator<index_list_range, index_range, value_range, value_pointer> iterator;
-  typedef vector_list_iterator<const index_list_range, const index_range, const value_range, const value_pointer> const_iterator;
+  typedef vector_list_iterator2<index_list_range, index_range, value_range, value_pointer> iterator2;
+  typedef vector_list_iterator2<const index_list_range, const index_range, const value_range, const value_pointer> const_iterator2;
   
   //typedef vector_list_iterator<>
   
   vector_list(value_allocator a1, index_allocator a2 )
-    : _index_allocator(a2)
+    : _size(0)
+    , _index_allocator(a2)
     , _value_allocator(a1)
   {
   }
-  
 
+  size_t size() const { return _size;}
   iterator begin()
+  {
+    return iterator(0, *this);
+  }
+
+  iterator end()
+  {
+    return iterator( size(), *this);
+  }
+
+
+  iterator2 begin2()
   {
     _index_pointer = *(_index_list.begin());
     _value_pointer = *(_index_pointer->begin());
-    return iterator( 
+    return iterator2( 
       index_list_range(_index_list.begin(), _index_list.end() ),
       index_range( _index_pointer->begin(), _index_pointer->end() ),
       value_range( _value_pointer->begin(), _value_pointer->end() ),
@@ -69,33 +110,216 @@ public:
 
   void push_back( const T& x )
   {
+    bool flag1 = true;
+    bool flag2 = true;
     index_list_iterator last_index = _last_index();
     _value_pointer = *((*last_index)->last());
     if (  _value_pointer->filled() )
     {
       if ( (*last_index)->filled() )
       {
+        //size_t start_index = _value_pointer->start_index + _value_pointer->size();
+        size_t last_index_value = _value_pointer->last_index;
         _index_pointer = _index_allocator.allocate(1);
         _index_allocator.construct(_index_pointer, typename index_allocator::value_type() );
+        // _index_pointer->start_index = start_index;
+        _index_pointer->last_index = last_index_value;
         _value_pointer = _value_allocator.allocate(1);
         _value_allocator.construct(_value_pointer, typename value_allocator::value_type() );
+        // _value_pointer->start_index = start_index;
+        _value_pointer->last_index = last_index_value;
         _index_pointer->push_back( _value_pointer );
         _index_list.push_back( _index_pointer );
         last_index = _last_index();
+        //flag1 = false;
+        //flag2 = false;
       }
       else
       {
+        //size_t start_index = _value_pointer->start_index + _value_pointer->size();
+        size_t last_index_value = _value_pointer->last_index;
         _value_pointer = _value_allocator.allocate(1);
         _value_allocator.construct(_value_pointer, typename value_allocator::value_type() );
+        _value_pointer->last_index = last_index_value;
         _index_pointer->push_back(_value_pointer);
+        // flag1 = false;
       }
     }
 
+    //++ (*last_index)->total_size;
     _value_pointer->push_back(x);
+    ++_size;
+    if (flag1) ++_value_pointer->last_index;
+    if (flag2) ++_index_pointer->last_index;
+  }
+
+  T& at(std::ptrdiff_t n)
+  {
+    typename index_list::iterator index_list_itr = std::lower_bound(
+      _index_list.begin(),
+      _index_list.end(),
+      n,
+      [] (const typename index_list::value_type& ilv, const size_t& index) -> bool
+      {
+        return ilv->last_index  < index + 1;
+      }
+    );
+
+    _index_pointer = *index_list_itr;
+    typename index_pointer::value_type::iterator index_itr = std::lower_bound(
+      _index_pointer->begin(),
+      _index_pointer->end(),
+      n,
+      [this] (const typename index_pointer::value_type::value_type& iv, const size_t& index) -> bool
+      {
+        _value_pointer = iv;
+        return _value_pointer->last_index < index + 1;
+      }
+    );
+
+    _value_pointer = *index_itr;
+    return (*_value_pointer)[ _value_pointer->size() - (_value_pointer->last_index - n) ];
+  }
+
+
+  iterator insert ( iterator position, const T& x )
+  {
+    if ( position == this->end() )
+      this->push_back(x);
+
+    std::ptrdiff_t offset = position - this->begin();
+    this->_insert( offset, x);
+    /*
+    std::ptrdiff_t offset = position - this->begin();
+    _value_pointer = this->_split(offset);
+    std::ptrdiff_t local_offset = _value_pointer->size() - (_value_pointer->last_index - offset);
+    _value_pointer->insert( _value_pointer->begin() + local_offset, x );
+    ++(_value_pointer->last_index);
+    ++_size;
+    */
+    // TODO: инкрементировать у всех последующих
+    return position;
+    /*_value_pointer = _find_value_pointer( offset );
+    if ( _value_pointer->filled() )
+    {
+      this->_split(offset);
+      _value_pointer = _find_value_pointer( offset );
+    }
+    */
     
   }
-  
+
 protected:
+  /*value_pointer*/void _insert( std::ptrdiff_t n, const T& x )
+  {
+    // Расщипляем при заполненни
+
+    typename index_list::iterator index_list_itr = std::lower_bound(
+      _index_list.begin(),
+      _index_list.end(),
+      n,
+      [] (const typename index_list::value_type& ilv, const size_t& index) -> bool
+      {
+        return ilv->last_index  < index + 1;
+      }
+    );
+
+    _index_pointer = *index_list_itr;
+    typename index_pointer::value_type::iterator index_itr = std::lower_bound(
+      _index_pointer->begin(),
+      _index_pointer->end(),
+      n,
+      [this] (const typename index_pointer::value_type::value_type& iv, const size_t& index) -> bool
+      {
+        _value_pointer = iv;
+        return _value_pointer->last_index < index + 1;
+      }
+    );
+    _value_pointer = *index_itr;
+
+    if ( _value_pointer->filled() )
+    {
+      value_pointer filled_value_pointer = _value_pointer;
+      if ( _index_pointer->filled() )
+      {
+        // разбиваем основной вектор
+        std::ptrdiff_t pos = _index_list.end() - index_list_itr;
+        _index_list.resize( _index_list.size() + 1 );
+        std::copy_backward( _index_list.begin() + pos, _index_list.begin() + _index_list.size()-1 , _index_list.begin() + pos + 1 );
+        index_list_itr = _index_list.begin() + pos;
+        _index_pointer = _index_allocator.allocate(1);
+        _index_allocator.construct(_index_pointer, typename index_allocator::value_type() );
+        _index_list[pos] = _index_pointer;
+        _value_pointer = _value_allocator.allocate(1);
+        _value_allocator.construct(_value_pointer, typename value_allocator::value_type() );
+        //??? _value_pointer->last_index = last_index_value;
+        _index_pointer->push_back( _value_pointer );
+      }
+      else
+      {
+        // разбиваем массив масивов
+        std::ptrdiff_t pos = _index_pointer->end() - index_itr;
+        _index_pointer->resize( _index_pointer->size() + 1 );
+        std::copy_backward( _index_pointer->begin() + pos, _index_pointer->begin() + _index_pointer->size()-1 , _index_pointer->begin() + pos + 1 );
+        index_itr = _index_pointer->begin() + pos;
+        _value_pointer = _value_allocator.allocate(1);
+        (*_index_pointer)[pos] = _value_pointer;
+      }
+
+      // разбиваем основной масив
+      std::ptrdiff_t pos = filled_value_pointer->size() - ( filled_value_pointer->last_index -n );
+      _value_pointer->resize( filled_value_pointer->size() - n );
+      std::copy( filled_value_pointer->begin() + pos, filled_value_pointer->end(), _value_pointer->begin() );
+      filled_value_pointer->resize(pos);
+      _value_pointer->last_index = filled_value_pointer->last_index;
+      filled_value_pointer->last_index -= _value_pointer->size();
+    }
+
+    
+    std::ptrdiff_t local_offset = _value_pointer->size() - (_value_pointer->last_index - n);
+    _value_pointer->insert( _value_pointer->begin() + local_offset, x );
+    ++_size;
+    std::for_each( index_list_itr, _index_list.end(), [this]( typename index_list::value_type& iv)
+    {
+      _index_pointer = iv;
+      ++iv->last_index;
+      std::for_each( _index_pointer->begin(), _index_pointer->end(), [this](typename index_pointer::value_type::value_type& ivv )
+      {
+        _value_pointer = ivv;
+        ++_value_pointer->last_index;
+      });
+    });
+    
+    //return _value_pointer;
+  }
+  
+  value_pointer _find_value_pointer(std::ptrdiff_t n)
+  {
+    typename index_list::iterator index_list_itr = std::lower_bound(
+      _index_list.begin(),
+      _index_list.end(),
+      n,
+      [] (const typename index_list::value_type& ilv, const size_t& index) -> bool
+      {
+        return ilv->last_index  < index + 1;
+      }
+    );
+
+    _index_pointer = *index_list_itr;
+    typename index_pointer::value_type::iterator index_itr = std::lower_bound(
+      _index_pointer->begin(),
+      _index_pointer->end(),
+      n,
+      [this] (const typename index_pointer::value_type::value_type& iv, const size_t& index) -> bool
+      {
+        _value_pointer = iv;
+        return _value_pointer->last_index < index + 1;
+      }
+    );
+    _value_pointer = *index_itr;
+    return _value_pointer;
+  }
+  
   index_list_iterator _last_index()
   {
     if ( _index_list.empty() )
@@ -111,6 +335,7 @@ protected:
   }
 
 private:
+  size_t          _size;
   index_list      _index_list;
   index_allocator _index_allocator;
   value_allocator _value_allocator;

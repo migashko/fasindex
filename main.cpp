@@ -14,6 +14,7 @@
 #include <iterator>
 
 #include <fas/range.hpp>
+#include <fas/xtime.hpp>
 
 #include "mmap_buffer.hpp"
 //#include "offset_pointer.hpp"
@@ -34,8 +35,13 @@ struct data
   size_t buffer[8];
 };
 
+#define MAX_COUNT (1024*1024*1)
+
 int main()
 {
+  rlimit rl={1024*1024*1024, 1024*1024*1024 };
+  setrlimit(RLIMIT_DATA, &rl );
+  
   mmap_buffer mmm, mmm2;
   
   if ( !mmm.open("./data.bin", 1024) )
@@ -55,7 +61,7 @@ int main()
   
   //the_allocator<int> alloca = the_allocator<int>(am1);
 
-  typedef vector_list<data, 128, 128> vector_type;
+  typedef vector_list<data, 4096, 4096> vector_type;
   
   typedef vector_type::index_allocator index_allocator;
   typedef vector_type::value_allocator value_allocator;
@@ -66,27 +72,42 @@ int main()
   vector_type vv(am1, am2);
 
   data d;
-  for ( size_t i=0 ; i < 1024 *  1024  /** 100*/; i++)
+  for ( size_t i=0 ; i < MAX_COUNT; i++)
   {
     d.index = i;
     vv.push_back(d);
   }
 
+  std::cout << "test insert " << std::endl;
+  vector_type::iterator cur = vv.begin() + 1000/*MAX_COUNT/2*/;
+  d.index = 3333;
+  cur = vv.insert( cur, d );
+  std::cout << cur->index << std::endl;
+
   //typedef std::iterator_traits< unsigned* const >::difference_type difference_type;
+  std::cout << "benchmark " << std::endl;
 
   vector_type::iterator beg = vv.begin();
   //vector_type::iterator end = vv.end();
-  for ( int i=0 ; i < 1024 *  1024  /** 100*/; i++, ++beg)
+  fas::nanospan start = fas::process_nanotime();
+  for ( int i=0 ; i < MAX_COUNT; i++, ++beg)
   {
+    /*
     beg = vv.begin();
-    beg += i;
-    std::cout << beg->index << " i==" << i << std::endl;
-    if (beg->index!=i)
+    beg += 1024 *  1024 -1;
+    beg -= i*/ /*1024 *  1024 - 1*/;
+    //std::cout << beg->index << " i==" << i << std::endl;
+    if (beg->index!=/*1024 *  1024 - 1 - */i)
+    //if (vv.at(i).index!=i)
     {
-      std::cout << "fuck" << std::endl;
+      std::cout << "fuck " << beg->index << std::endl;
       exit(1);
     }
   }
+  fas::nanospan finish = fas::process_nanotime();
+
+  std::cout << "time: " << finish - start << std::endl;
+  std::cout << "rate: " << fas::rate(finish - start) * MAX_COUNT << std::endl;
   
   
   /*std::cout << itr->index << std::endl;
