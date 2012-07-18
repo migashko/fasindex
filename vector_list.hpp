@@ -23,11 +23,157 @@ struct last_index_array
 /**
  * @tparam T 
  */
-template<typename T, typename P, typename A>
+template<typename T, int N, typename P, typename A>
 class array_of_array
 {
 public:
-public:
+  typedef T index_type;
+  typedef last_index_array<index_type, N> index_array;
+  typedef A allocator;
+  typedef P main_pointer;
+  typedef typename allocator::pointer array_pointer;
+  typedef typename allocator::value_type array_type;
+
+  typedef typename array_type::value_type value_type;
+  typedef typename array_type::reference reference;
+  typedef typename array_type::const_reference const_reference;
+  typedef typename array_type::pointer pointer;
+  typedef typename array_type::const_pointer const_pointer;
+  typedef typename array_type::iterator iterator;
+  typedef typename array_type::const_iterator const_iterator;
+  typedef typename array_type::reverse_iterator reverse_iterator;
+  typedef typename array_type::const_reverse_iterator const_reverse_iterator;
+  typedef typename array_type::difference_type difference_type;
+  typedef typename array_type::size_type size_type;
+
+  /**
+   * @param main_ptr указатель на array< T, N>, где T offset
+   * @param ap       прототип указателя на array< value_type, X>
+   */
+  array_of_array( main_pointer main_ptr, array_pointer ap, allocator a )
+    : _main_array(main_ptr)
+    , _array(ap)
+    , _allocator(a)
+  {}
+
+  size_t last_index() const { _main_array->last_index; }
+  void last_index(size_t new_last_index) const { _main_array->new_last_index; }
+
+  reference operator[](size_type n) { return this->at(n); }
+  const_reference operator[](size_type n) const { return this->at(n); }
+  
+  const_reference at ( size_type n ) const { /*return _data[n];*/ }
+  reference at ( size_type n ) { /*return _data[n];*/ }
+  
+  reference front ( ){ /*return _data[0];*/ }
+  const_reference front ( ) const { /*return _data[0];*/ }
+  reference back ( ){ /*return _data[_size-1];*/ }
+  const_reference back ( ) const{ /*return _data[_size-1];*/ }
+
+  /*
+  size_type size() const { return _size;}
+  size_type max_size() const { return N;}
+  size_type capacity() const { return N;}
+  */
+  /*
+  bool empty () const {return _size==0;}
+  bool filled () const { return _size == N;}
+  void resize ( size_type sz, T value = value_type() )
+  {
+    if (sz > _size)
+      std::fill_n( end(), sz - _size, value );
+    _size = sz;
+  }
+  void reserve ( size_type n ) {}
+  */
+
+  /*
+  reverse_iterator rbegin() { return reverse_iterator(end()); }
+  const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
+
+  reverse_iterator rend() { return reverse_iterator(begin()); }
+  const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+  */
+
+  /*
+  iterator begin() { return _data;}
+  const_iterator begin() const { return _data;}
+  iterator end() { return _data + _size;}
+  const_iterator end() const { return _data + _size;}
+  iterator last() { return _data + _size - 1;}
+  const_iterator last() const { return _data  + _size - 1;}
+  */
+
+  /*?
+  void clear()
+  {
+    _size = 0;
+    std::fill_n( begin(), N, T() );
+  }
+  */
+
+
+  template <class InputIterator>
+  InputIterator assign ( InputIterator first, InputIterator last )
+  {
+    /*
+    std::copy( first, last, _data );
+    _size = std::distance(first, last);
+    */
+  }
+
+  /** @return сколько осталось */
+  size_type assign ( size_type n, const T& u )
+  {
+    /*std::fill_n( begin(), n, u );
+    _size = n;
+    */
+  }
+
+  void push_back ( const T& x )
+  {
+    // _data[_size++] = x;
+  }
+
+  void pop_back ( )
+  {
+    // --_size;
+  }
+
+  iterator insert ( iterator position, const T& x )
+  {
+    /*
+    std::copy_backward(position, end(), end()+1);
+    *position = x;
+    ++_size;
+    */
+    return position;
+  }
+
+  void insert ( iterator position, size_type n, const T& x )
+  {
+    /*
+    std::copy_backward(position, end(), end()+n);
+    std::fill_n(position, n, x);
+    _size+=n;
+    */
+  }
+
+  template <class InputIterator>
+  void insert ( iterator position, InputIterator first, InputIterator last )
+  {
+    /*
+    std::copy_backward(position, end(), end()+std::distance(first,last) );
+    std::copy(first, last, position);
+    _size+=std::distance(first,last);
+    */
+  }
+
+
+private:
+  main_pointer _main_array;
+  array_pointer _array;
+  allocator _allocator;
 };
 
 

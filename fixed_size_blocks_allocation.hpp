@@ -59,7 +59,9 @@ public:
     chain_type* chn = (chain_type*)_memory_manager->addr();
     chn->free(ptr);
   }
-  
+
+/// offset pointer
+
   T* get(size_t offset) const
   {
     return reinterpret_cast<T*>(_memory_manager->addr() + offset);

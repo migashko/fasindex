@@ -37,10 +37,61 @@ struct data
 
 #define MAX_COUNT (1024*1024*1)
 
+void test_array_of_array()
+{
+  mmap_buffer buffer1, buffer2;
+
+  if ( !buffer1.open("./buffer_index.bin", 1024) )
+    std::cout << "fuck1" << std::endl;
+  if (!buffer1)
+    std::cout << "fuck2" << std::endl;
+
+  if ( !buffer2.open("./buffer_data.bin", 1024) )
+    std::cout << "2 fuck1" << std::endl;
+  if (!buffer2)
+    std::cout << "2 fuck2" << std::endl;
+
+  std::cout << "OK" << std::endl;
+
+  typedef size_t index_type;
+  typedef last_index_array<data,  128> data_array;
+  typedef last_index_array<size_t, 256> index_array;
+
+  typedef fixed_size_blocks_allocation<data_array, mmap_buffer> data_buffer_manager;
+  typedef fixed_size_blocks_allocation<index_array, mmap_buffer> index_buffer_manager;
+
+  typedef managed_allocator< data_array, data_buffer_manager > data_allocator;
+  typedef managed_allocator< index_array, index_buffer_manager > index_allocator;
+
+  //template<typename T, int N, typename P, typename A>
+  typedef array_of_array<index_type, 256, index_allocator::pointer, data_allocator> arr_of_arr;
+
+  data_buffer_manager dbm(&buffer2);
+  index_buffer_manager ibm(&buffer1);
+
+  data_allocator da(dbm);
+  index_allocator ia(ibm);
+
+  index_allocator::pointer iptr = ia.allocate(1);
+  ia.construct(iptr, index_allocator::value_type() );
+
+  data_allocator::pointer data_ptr(&dbm);
+
+  arr_of_arr aoa( iptr, data_ptr, da );
+  
+  //index_allocator.
+  
+
+};
+
+
 int main()
 {
   rlimit rl={1024*1024*1024, 1024*1024*1024 };
   setrlimit(RLIMIT_DATA, &rl );
+
+  test_array_of_array();
+  return 0;
   
   mmap_buffer mmm, mmm2;
   

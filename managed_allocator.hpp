@@ -29,9 +29,9 @@ struct managed_allocator
     typedef managed_allocator<U> other;
   };
 
-  pointer address (reference value ) const { return &value; }
+  pointer address (reference value ) const { return static_cast<char*>(&value) - _mmm.addr() ; }
 
-  const_pointer address (const_reference value) const { return &value; }
+  const_pointer address (const_reference value) const { return static_cast<char*>(&value) - _mmm.addr() ; }
   
   size_type max_size () const throw() { return ::std::numeric_limits <size_type>::max() / sizeof(T); }
 

@@ -58,7 +58,13 @@ public:
   const_iterator end() const { return _data + _size;}
   iterator last() { return _data + _size - 1;}
   const_iterator last() const { return _data  + _size - 1;}
-  
+
+  void clear()
+  {
+    _size = 0;
+    std::fill_n( begin(), N, T() );
+  }
+
   
   template <class InputIterator>
   void assign ( InputIterator first, InputIterator last )
