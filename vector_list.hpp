@@ -18,7 +18,13 @@ template<typename T, int N>
 struct last_index_array
   : last_index_holder
   , array<T, N>
-{};
+{
+  // тольк для данных, TODO: перенести в array_of_array
+  size_t to_index(size_t n)
+  {
+    return array<T, N>::size() - (last_index_holder::last_index - n);
+  }
+};
 
 /**
  * @tparam T 
@@ -51,19 +57,20 @@ public:
    * @param ap       прототип указателя на array< value_type, X>
    */
   array_of_array( main_pointer main_ptr, array_pointer ap, allocator a )
-    : _main_array(main_ptr)
+    : _size(0)
+    , _main_array(main_ptr)
     , _array(ap)
     , _allocator(a)
   {}
 
-  size_t last_index() const { _main_array->last_index; }
+  size_t last_index() const { return _main_array->last_index; }
   void last_index(size_t new_last_index) const { _main_array->new_last_index; }
 
   reference operator[](size_type n) { return this->at(n); }
   const_reference operator[](size_type n) const { return this->at(n); }
   
-  const_reference at ( size_type n ) const { /*return _data[n];*/ }
-  reference at ( size_type n ) { /*return _data[n];*/ }
+  const_reference at ( size_type n ) const { return this->_at(n); }
+  reference at ( size_type n ) { return this->_at(n); }
   
   reference front ( ){ /*return _data[0];*/ }
   const_reference front ( ) const { /*return _data[0];*/ }
@@ -123,56 +130,231 @@ public:
   }
 
   /** @return сколько осталось */
-  size_type assign ( size_type n, const T& u )
+  size_type assign ( size_type n, const value_type& u )
   {
     /*std::fill_n( begin(), n, u );
     _size = n;
     */
   }
 
-  void push_back ( const T& x )
+  /** @return false - если нет места для вставки */
+  bool push_back ( const value_type& x )
   {
-    // _data[_size++] = x;
-  }
-
-  void pop_back ( )
-  {
-    // --_size;
-  }
-
-  iterator insert ( iterator position, const T& x )
-  {
-    /*
-    std::copy_backward(position, end(), end()+1);
-    *position = x;
+    size_t pred_last_index = 0;
+    bool flag = false;
+    if ( _main_array->empty() )
+      flag = true;
+    
+    if ( !flag )
+    {
+      _array = *(_main_array->last());
+      flag = _array->filled();
+      pred_last_index = _array->last_index;
+    }
+    
+    if (flag)
+    {
+      if ( _main_array->filled() )
+        return false;
+      
+      _array = _allocator.allocate(1);
+      _allocator.construct(_array, array_type() );
+      _array->last_index  = pred_last_index;
+      _main_array->push_back(_array);
+      
+    }
+    
+    _array = *(_main_array->last());
+    _array->push_back(x);
+    ++_array->last_index;
+    ++_main_array->last_index;
     ++_size;
-    */
-    return position;
+    return true;
   }
 
-  void insert ( iterator position, size_type n, const T& x )
+  void pop_back( )
   {
-    /*
-    std::copy_backward(position, end(), end()+n);
-    std::fill_n(position, n, x);
-    _size+=n;
-    */
+    if ( _main_array->empty() )
+      throw std::out_of_range("pop_back");
+    _array = *(_main_array->last());
+    _array->pop_back( );
+    if (_array->empty() )
+      _main_array->pop_back( );
+    else
+      --_array->last_index;
+  }
+  
+  /** Если n == this->size() то возвращает сколько из count
+   *  м.б. добавленно в конец.
+   *  count - если можно вставить все элементы
+   *  0 - в противном случае
+   */
+  size_type can_insert(size_type n, size_type count)
+  {
+    size_type capacity_size;
+    if ( n == _size )
+    {
+      if ( _main_array->empty() )
+      {
+        capacity_size = main_pointer::value_type::dimension * array_type::dimension;
+        return capacity_size < count ? capacity_size : count;
+      }
+
+      _array = *(_main_array->last());
+    }
+    else
+    {
+      typename index_array::iterator itr = _find_array(n);
+      if (itr==_main_array->end())
+        throw std::out_of_range("array_of_array::_at");
+      _array = *itr;
+    }
+    
+    capacity_size = ( _array->capacity() - _array->size() ) + ( _main_array->capacity() - _main_array->size())*array_type::dimension;
+    if ( n == _size )
+      return capacity_size < count ? capacity_size : count;
+    return capacity_size < count ? 0 : count;
+  }
+
+  // n - перед каким вставлять
+  bool insert( size_type n, const value_type& x )
+  {
+    if ( n == _main_array->last_index)
+      return push_back(x);
+    
+    typename index_array::iterator itr = _find_array(n);
+    if (itr==_main_array->end())
+      throw std::out_of_range("array_of_array::insert");
+    
+    _array = *itr;
+    if ( _array->to_index(n) == 0 && itr!=_main_array->begin())
+    {
+      --itr;
+      _array = *itr;
+    }
+    
+    typename index_array::difference_type dist = itr - _main_array->begin();
+    
+    
+    if ( _array->filled() )
+    {
+      /*if ( _main_array->filled() )
+        return false;*/
+      array_pointer new_array = _allocator.allocate(1);
+      _allocator.construct(new_array, array_type());
+      new_array = *(_main_array->insert(itr+1, new_array));
+      itr = _main_array->begin() + dist;
+      _array = *itr;
+      size_type second_size = _array->size()/2;
+      size_type first_size = _array->size() - second_size;
+      bool to_second = _array->to_index(n) > first_size;
+      
+      new_array->resize(second_size);
+      std::copy( _array->begin() + first_size, _array->end(), new_array->begin() );
+      new_array->last_index = _array->last_index;
+      _array->last_index -= second_size;
+      _array->resize(first_size);
+      if ( to_second )
+      {
+         ++itr;
+        _array = *itr;
+       
+      }
+    }
+    
+    _array->insert(_array->begin() + _array->to_index(n), x );
+    
+    for ( ;itr!=_main_array->end();++itr)
+    {
+      _array = *itr;
+      ++_array->last_index;
+    }
+    ++_size;
+    ++_main_array->last_index;
+    return true;
+  }
+
+  /// @return сколько элементов было добавленно
+  size_type insert ( size_type n, size_type count, const value_type& x )
+  {
+    if ( size_type insert_count = can_insert(n, count) )
+    {
+      for (size_type i=0; i < insert_count; ++i )
+        this->insert( n, x);
+      return insert_count;
+    }
+    return 0;
   }
 
   template <class InputIterator>
-  void insert ( iterator position, InputIterator first, InputIterator last )
+  InputIterator insert ( size_type position, InputIterator first, InputIterator last )
   {
-    /*
-    std::copy_backward(position, end(), end()+std::distance(first,last) );
-    std::copy(first, last, position);
-    _size+=std::distance(first,last);
-    */
+    if ( size_type insert_count = last-first )
+    {
+      for (size_type i=0; i < insert_count; ++i, ++first )
+      {
+        if ( !insert( position+i, *first) )
+          return first;
+      }
+    }
+    return first;
+  }
+private:
+  
+  reference _at(size_type n)
+  {
+    typename index_array::iterator itr = _find_array(n);
+    if (itr==_main_array->end())
+      throw std::out_of_range("array_of_array::_at");
+    _array = *itr;
+    return _array->at( _array->to_index(n) );
+  }
+
+  const_reference _at(size_type n) const
+  {
+    typename index_array::const_iterator itr = _find_array(n);
+    if (itr==_main_array->end())
+      throw std::out_of_range("array_of_array::_at");
+    _array = *itr;
+    return _array->at( _array->to_index(n) );
+  }
+
+  typename index_array::iterator _find_array(size_type n)
+  {
+    return 
+      std::lower_bound(
+        _main_array->begin(),
+        _main_array->end(),
+        n,
+        [this] (const typename index_array::value_type& iv, const size_type& index) -> bool
+        {
+          _array = iv;
+          //std::cout << _array->last_index << "<" << index + 1 << std::endl;
+          return _array->last_index < index + 1;
+        }
+      );
+  }
+
+  typename index_array::const_iterator _find_array(size_type n) const
+  {
+    return 
+      std::lower_bound(
+        _main_array->begin(),
+        _main_array->end(),
+        n,
+        [this] (const typename index_array::value_type& iv, const size_type& index) -> bool
+        {
+          _array = iv;
+          return _array->last_index < index + 1;
+        }
+      );
   }
 
 
 private:
+  size_type _size;
   main_pointer _main_array;
-  array_pointer _array;
+  mutable array_pointer _array;
   allocator _allocator;
 };
 

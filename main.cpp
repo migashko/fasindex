@@ -79,7 +79,41 @@ void test_array_of_array()
 
   arr_of_arr aoa( iptr, data_ptr, da );
   
-  //index_allocator.
+  data d;
+  // 32768
+  for (int i=0; i < 1000; ++i)
+  {
+    d.index = i;
+    aoa.push_back(d);
+  }
+
+  for (int i=10000; i < 16000; ++i)
+  {
+    d.index = i;
+    aoa.push_back(d);
+  }
+
+  std::vector<data> vd;
+  for (int i=1000; i < 10000; ++i)
+  {
+    //std::cout << i << std::endl;
+    d.index = i;
+    vd.push_back(d);
+    //aoa.insert(i, d);
+  }
+
+  aoa.insert(1000, vd.begin(), vd.end());
+  std::cout << "--------------" << std::endl;
+  for (int i =0; i < 16000; ++i)
+  {
+    //std::cout << aoa.can_insert(i, -1) << std::endl;
+    if ( aoa[i].index!=i )
+    {
+      std::cout << aoa[i].index << "!=" << i << std::endl; 
+      //exit(0);
+    }
+  }
+  std::cout << aoa.can_insert(10, -1) << std::endl;
   
 
 };

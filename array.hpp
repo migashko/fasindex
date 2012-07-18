@@ -9,6 +9,7 @@ template<typename T, size_t N>
 class array
 {
 public:
+  enum { dimension = N};
   typedef T value_type;
   typedef T data_type[N];
   typedef size_t size_type;
@@ -91,6 +92,9 @@ public:
   
   iterator insert ( iterator position, const T& x )
   {
+    if ( this->size() + 1 > this->capacity() )
+      throw std::out_of_range("array::insert");
+
     std::copy_backward(position, end(), end()+1);
     *position = x;
     ++_size;
@@ -99,6 +103,8 @@ public:
   
   void insert ( iterator position, size_type n, const T& x )
   {
+    if ( this->size() + n > this->capacity() )
+      throw std::out_of_range("array::insert");
     std::copy_backward(position, end(), end()+n);
     std::fill_n(position, n, x);
     _size+=n;
@@ -107,9 +113,26 @@ public:
   template <class InputIterator>
   void insert ( iterator position, InputIterator first, InputIterator last )
   {
-    std::copy_backward(position, end(), end()+std::distance(first,last) );
+    typename InputIterator::difference_type dist = std::distance(first,last);
+    if ( this->size() + dist > this->capacity() )
+      throw std::out_of_range("array::insert");
+
+    std::copy_backward(position, end(), end()+dist );
     std::copy(first, last, position);
     _size+=std::distance(first,last);
+  }
+  
+  iterator erase ( iterator position )
+  {
+    std::copy( position + 1, this->end(), position);
+    this->resize( _size - 1 );
+  }
+  
+  iterator erase ( iterator first, iterator last )
+  {
+    difference_type dist = last - first;
+    std::copy( last, this->end(), first);
+    this->resize( _size - dist );
   }
   
 private:
