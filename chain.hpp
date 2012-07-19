@@ -58,9 +58,9 @@ struct chain
 
   void free(T* value)
   {
-    size_t offset = value - this->begin()->begin();
-    offset -= offset%sizeof(chunk_type);
-    chunk_type* chk = begin() + offset;
+    size_t offset = (char*)value - (char*)this->begin()/*->begin()*/;
+    //offset -= offset%sizeof(chunk_type);
+    chunk_type* chk = begin() + offset/sizeof(chunk_type);
     chk->free(value);
     if ( offset < first_free )
       first_free = offset;

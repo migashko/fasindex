@@ -82,6 +82,9 @@ public:
     }
     return true;
   }
+
+  void clear() {  this->resize(0); }
+
   
   bool resize(size_t size)
   {

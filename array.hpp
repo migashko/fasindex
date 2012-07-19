@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <stdexcept>
 
 /// TODO: проверки за выход диапазона 
 template<typename T, size_t N>
@@ -126,6 +127,7 @@ public:
   {
     std::copy( position + 1, this->end(), position);
     this->resize( _size - 1 );
+    return position;
   }
   
   iterator erase ( iterator first, iterator last )
@@ -133,6 +135,7 @@ public:
     difference_type dist = last - first;
     std::copy( last, this->end(), first);
     this->resize( _size - dist );
+    return first;
   }
   
 private:

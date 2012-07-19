@@ -4,6 +4,7 @@
 #include "offset_pointer.hpp"
 #include "chunk.hpp"
 #include "chain.hpp"
+#include <iostream>
 
 template<typename T, typename M /* = */ >
 class fixed_size_blocks_allocation
@@ -16,8 +17,8 @@ public:
   typedef offset_pointer<T, self> pointer;
   typedef offset_pointer<const T, self> const_pointer;
 
-  fixed_size_blocks_allocation(memory_manager* mm)
-    : _memory_manager(mm)
+  fixed_size_blocks_allocation(memory_manager& mm)
+    : _memory_manager(&mm)
   {}
 
   bool acquire()
@@ -57,7 +58,7 @@ public:
   void deallocate(pointer ptr)
   {
     chain_type* chn = (chain_type*)_memory_manager->addr();
-    chn->free(ptr);
+    chn->free( reinterpret_cast<T*>(_memory_manager->addr() + ptr.offset) );
   }
 
 /// offset pointer
