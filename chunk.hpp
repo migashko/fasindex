@@ -1,6 +1,9 @@
 #ifndef CHUNK_HPP
 #define CHUNK_HPP
 
+#include <cstddef>
+#include <stdexcept>
+
 template<typename T>
 struct chunk
 {
@@ -9,31 +12,71 @@ struct chunk
 
   chunk(): bits(0) {}
 
-  bool filled() const 
+  bool filled() const
   {
     return bits == static_cast<size_t>(-1);
   }
-  
-  bool empty() const  
+
+  bool empty() const
   {
-    return bits == 0; 
+    return bits == 0;
   }
-  
-  size_t max_count() const 
+
+  size_t max_count() const
   {
-    return sizeof(size_t)*8; 
+    return sizeof(size_t)*8;
   }
-  
-  size_t size() const 
+
+  size_t size() const
   {
     return sizeof(this);
   }
 
-  void clear() 
+  void clear()
   {
-    bits = 0; 
+    bits = 0;
   }
-  
+
+  /*
+  size_t first()
+  {
+    for ( size_t i = 0; i < sizeof(size_t)*8; ++i )
+      if ( bits & ( static_cast<size_t>(1) << i) )
+        return i;
+    return static_cast<size_t>(-1);
+  }
+
+  size_t next(size_t pos)
+  {
+
+  }*/
+
+  T* first_value()
+  {
+    size_t index = next_occuped(0);
+    if ( index == static_cast<size_t>(-1) )
+      return 0;
+    return data + index;
+  }
+
+  T* next_value(T* current)
+  {
+    size_t index = next_occuped(current - data + 1);
+    if ( index == static_cast<size_t>(-1) )
+      return 0;
+    return data + index;
+  }
+
+
+  size_t next_occuped(size_t pos = 0)
+  {
+    for ( size_t i = pos; i < sizeof(size_t)*8; ++i )
+      if ( bits & ( static_cast<size_t>(1) << i) )
+        return i;
+    return static_cast<size_t>(-1);
+  }
+
+
   size_t first_free()
   {
     /// биты c права на лево
@@ -57,10 +100,6 @@ struct chunk
     */
   }
 
-  T* begin()
-  {
-    return data;
-  }
 
   T* mark()
   {
@@ -73,13 +112,16 @@ struct chunk
   T* mark(size_t index)
   {
     bits |= ( static_cast<size_t>(1) <<  index );
-    return begin() + index;
+    return data + index;
   }
 
   void free(T* addr)
   {
-    size_t index = addr - begin();
-    bits &= ~(1<<index);
+    size_t index = addr - data;
+    if ( index < 64 )
+      bits &= ~( static_cast<size_t>(1)<<index);
+    else
+      throw std::invalid_argument("addr");
   }
 };
 

@@ -83,7 +83,12 @@ public:
     return true;
   }
 
-  void clear() {  this->resize(0); }
+  void clear() 
+  {
+    _size = 0;
+    resize(0);
+    ftruncate(_fd, 0);
+  }
 
   
   bool resize(size_t size)

@@ -21,6 +21,22 @@ public:
     : _memory_manager(&mm)
   {}
 
+  pointer begin()
+  {
+    if ( _memory_manager->size() == 0 )
+      return pointer( this );
+
+    chain_type* chn = (chain_type*)_memory_manager->addr();
+    if ( T* value = chn->first_value() )
+      return pointer( this, reinterpret_cast<char*>(value) - _memory_manager->addr() );
+    return pointer( this );
+  }
+
+  pointer end()
+  {
+    return pointer( this );
+  }
+
   bool acquire()
   {
     size_t offset = _memory_manager->size();
@@ -88,10 +104,18 @@ public:
       return static_cast<size_t>(-1);
     return reinterpret_cast<char*>(p) - _memory_manager->addr();
   }
-  
-  size_t next(size_t offset1, size_t offset2 = 1)
+
+  size_t next(size_t offset, size_t count = 1)
   {
-    return offset1 + offset2;
+    chain_type* chn = (chain_type*)_memory_manager->addr();
+
+    for (size_t i = 0 ; i < count ; ++i)
+    {
+      if ( T* current = chn->next_value( reinterpret_cast<T*>(_memory_manager->addr() + offset) ) )
+        offset = reinterpret_cast<char*>(current) - _memory_manager->addr();
+      return static_cast<size_t>(-1);
+    }
+    return offset;
   }
 private:
   memory_manager* _memory_manager;

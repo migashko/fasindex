@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <stdexcept>
 
-/// TODO: проверки за выход диапазона 
+/// TODO: проверки за выход диапазона
 template<typename T, size_t N>
 class array
 {
@@ -23,13 +23,32 @@ public:
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef const std::reverse_iterator<iterator> const_reverse_iterator;
   typedef std::ptrdiff_t difference_type;
-  
+
   array():_size(0) {};
-  
-  reference operator[](size_type n) { return _data[n]; }
-  const_reference operator[](size_type n) const { return _data[n]; }
-  const_reference at ( size_type n ) const { return _data[n]; }
-  reference at ( size_type n ) { return _data[n]; }
+
+  reference operator[](size_type n)
+  {
+    return this->at(n);
+  }
+
+  const_reference operator[](size_type n) const
+  {
+    return this->at(n);
+  }
+
+  const_reference at ( size_type n ) const
+  {
+    if ( n < _size)
+      return _data[n];
+    throw std::out_of_range("array::at");
+  }
+
+  reference at ( size_type n )
+  {
+    if ( n < _size )
+      return _data[n];
+    throw std::out_of_range("array::at");
+  }
   reference front ( ){ return _data[0]; }
   const_reference front ( ) const{ return _data[0]; }
   reference back ( ){ return _data[_size-1]; }
@@ -40,14 +59,14 @@ public:
   size_type capacity() const { return N;}
   bool empty () const {return _size==0;}
   bool filled () const { return _size == N;}
-  void resize ( size_type sz, T value = value_type() ) 
+  void resize ( size_type sz, T value = value_type() )
   {
     if (sz > _size)
       std::fill_n( end(), sz - _size, value );
     _size = sz;
   }
   void reserve ( size_type n ) {}
-  
+
   reverse_iterator rbegin() { return reverse_iterator(end()/*+_size-1*/); }
   const_reverse_iterator rbegin() const { return const_reverse_iterator(/*begin()+_size-1*/end()); }
 
@@ -63,34 +82,34 @@ public:
 
   void clear()
   {
-    _size = 0;
     std::fill_n( begin(), N, T() );
+    _size = 0;
   }
 
-  
+
   template <class InputIterator>
   void assign ( InputIterator first, InputIterator last )
   {
     std::copy( first, last, _data );
     _size = std::distance(first, last);
   }
-  
+
   void assign ( size_type n, const T& u )
   {
     std::fill_n( begin(), n, u );
     _size = n;
   }
-  
+
   void push_back ( const T& x )
   {
     _data[_size++] = x;
   }
-  
+
   void pop_back ( )
   {
     --_size;
   }
-  
+
   iterator insert ( iterator position, const T& x )
   {
     if ( this->size() + 1 > this->capacity() )
@@ -101,7 +120,7 @@ public:
     ++_size;
     return position;
   }
-  
+
   void insert ( iterator position, size_type n, const T& x )
   {
     if ( this->size() + n > this->capacity() )
@@ -110,7 +129,7 @@ public:
     std::fill_n(position, n, x);
     _size+=n;
   }
-  
+
   template <class InputIterator>
   void insert ( iterator position, InputIterator first, InputIterator last )
   {
@@ -122,14 +141,14 @@ public:
     std::copy(first, last, position);
     _size+=std::distance(first,last);
   }
-  
+
   iterator erase ( iterator position )
   {
     std::copy( position + 1, this->end(), position);
     this->resize( _size - 1 );
     return position;
   }
-  
+
   iterator erase ( iterator first, iterator last )
   {
     difference_type dist = last - first;
@@ -137,7 +156,7 @@ public:
     this->resize( _size - dist );
     return first;
   }
-  
+
 private:
   size_type _size;
   data_type _data;
