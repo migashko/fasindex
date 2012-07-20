@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #include "buffer_base.hpp"
+#include <iostream>
+
 
 class mmap_buffer
   : public buffer_base
@@ -32,10 +34,15 @@ public:
   void close()
   {
     if ( _addr!=0 )
+    {
+      if ( -1 == ::msync( _addr, _size, MS_SYNC ) )
+        std::cout << "mmap_buffer::msync fail" << std::endl;
       ::munmap( _addr, _size );
+    }
     
     if (_fd!=-1)
       ::close( _fd );
+    std::cout << "mmap_buffer::close" << std::endl;
   }
 
   

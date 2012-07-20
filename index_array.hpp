@@ -6,7 +6,7 @@
 
 template<typename T, int N>
 struct index_array
-  : next_index_holder
+  : next_index_super_holder
   , array<T, N>
 {
 };

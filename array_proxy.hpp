@@ -38,8 +38,7 @@ public:
    * @param ap       прототип указателя на array< value_type, X>
    */
   array_proxy( main_pointer main_ptr, /*array_pointer ap,*/ allocator a )
-    : _size(0)
-    , _main_array(main_ptr)
+    : _main_array(main_ptr)
     //, _array(ap)
     , _allocator(a)
   {
@@ -48,8 +47,8 @@ public:
   }
 
   array_proxy(const self& aoa)
-    : _size(aoa._size)
-    , _main_array(aoa._main_array)
+    : /*_size(aoa._size)
+    ,*/ _main_array(aoa._main_array)
     , _array(aoa._array)
     , _allocator(aoa._allocator)
   {
@@ -57,15 +56,61 @@ public:
 
   void operator = (const self& aoa)
   {
-    _size = aoa._size;
+    //_main_array->common_size = aoa._size;
     _main_array = aoa._main_array;
     _array = aoa._array;
     _allocator = aoa._allocator;
   }
 
 
+  /*
   size_t next_index() const { return _main_array->next_index(); }
   void next_index(size_t new_last_index) { _main_array->next_index( new_last_index ); }
+  */
+
+  void next_index(size_t n)
+  {
+    if ( !_main_array->flag )
+      _main_array->flag = _main_array->next_index != n;
+    _main_array->next_index = n;
+  }
+
+  void inc_next_index(size_t n = 1)
+  {
+    _main_array->flag = 1;
+    _main_array->next_index += n;
+  }
+
+  void dec_next_index(size_t n = 1)
+  {
+    _main_array->flag = 1;
+    _main_array->next_index -= n;
+  }
+
+  size_t next_index() const
+  {
+    return _main_array->next_index;
+  }
+
+  bool update_next_index()
+  {
+    if ( !_main_array->flag )
+      return true;
+    size_type current_next_index = this->next_index();
+    std::for_each(
+      _main_array->rbegin(),
+      _main_array->rend(),
+      [this, &current_next_index](const index_type& ind)
+      {
+        _array = ind;
+        _array->next_index = current_next_index;
+        current_next_index -= _array->size();
+      }
+    );
+    _main_array->flag = false;
+    return true;
+  } 
+
 
   reference operator[](size_type n) { return this->at(n); }
   const_reference operator[](size_type n) const { return this->at(n); }
@@ -81,8 +126,9 @@ public:
   bool filled () const { return _main_array->filled();}
 
 
+  
+  size_type size() const { return _main_array->common_size;}
   /*
-  size_type size() const { return _size;}
   size_type max_size() const { return N;}
   size_type capacity() const { return N;}
   */
@@ -117,7 +163,24 @@ public:
 
   void restore()
   {
+    /*
     _size = std::accumulate(
+      _main_array->begin(),
+      _main_array->end(),
+      0,
+      [this](size_t value, const index_type& ind) -> size_t
+      {
+        //std::cout << "restore _array->size(): " << _array->size() << std::endl;
+        _array = ind;
+        return value + _array->size();
+      }
+    );*/
+  }
+
+  void debug_check_size()
+  {
+    update_next_index();
+    size_t size = std::accumulate(
       _main_array->begin(),
       _main_array->end(),
       0,
@@ -127,6 +190,10 @@ public:
         return value + _array->size();
       }
     );
+
+    if ( size!=_main_array->common_size)
+      throw std::logic_error("debug_check_size()");
+    
   }
 
   void check_next_index()
@@ -153,6 +220,7 @@ public:
 
   void show_last_index()
   {
+    update_next_index();
     std::for_each(
       _main_array->begin(),
       _main_array->end(),
@@ -167,6 +235,7 @@ public:
 
   void clear()
   {
+    update_next_index();
     std::for_each(
       _main_array->begin(),
       _main_array->end(),
@@ -174,14 +243,13 @@ public:
       {
         _array = ind;
         _array->clear();
-        _array->next_index(0);
+        _array->next_index = 0;
         _allocator.deallocate(_array, 1);
       }
     );
     _main_array->clear();
-    _main_array->next_index(0);
-    _size = 0;
-
+    this->next_index(0);
+    _main_array->common_size = 0;
   }
 
 
@@ -207,6 +275,7 @@ public:
   /** @return false - если нет места для вставки */
   bool push_back ( const value_type& x )
   {
+    update_next_index();
     check_next_index();
     //size_t pred_last_index = 0;
     bool flag = false;
@@ -227,22 +296,25 @@ public:
 
       _array = _allocator.allocate(1);
       _allocator.construct(_array, array_type() );
-      _array->next_index( _main_array->next_index() );
+      _array->next_index =  this->next_index();
       _main_array->push_back(_array);
 
     }
 
     _array = *(_main_array->last());
     _array->push_back(x);
-    _array->inc_next_index();
-    _main_array->inc_next_index();
-    ++_size;
+    ++_array->next_index;
+    this->inc_next_index();
+    ++_main_array->common_size;
     check_next_index();
+    debug_check_size();
+    update_next_index();
     return true;
   }
 
   void pop_back( )
   {
+    /*
     if ( _main_array->empty() )
       throw std::out_of_range("pop_back");
     _array = *(_main_array->last());
@@ -251,6 +323,7 @@ public:
       _main_array->pop_back( );
     else
       --_array->last_index;
+    */
   }
 
   /** Если n == this->size() то возвращает сколько из count
@@ -288,7 +361,9 @@ public:
   // n - перед каким вставлять
   bool insert( size_type n, const value_type& x )
   {
-    if ( n == _main_array->next_index() )
+    update_next_index();
+    
+    if ( n == this->next_index() )
       return push_back(x);
 
     typename index_array::iterator itr = _find_array(n);
@@ -304,11 +379,10 @@ public:
 
     typename index_array::difference_type dist = itr - _main_array->begin();
 
-
     if ( _array->filled() )
     {
-      /*if ( _main_array->filled() )
-        return false;*/
+      if ( _main_array->filled() )
+        return false;
       array_pointer new_array = _allocator.allocate(1);
       _allocator.construct(new_array, array_type());
       new_array = *(_main_array->insert(itr+1, new_array));
@@ -316,12 +390,12 @@ public:
       _array = *itr;
       size_type second_size = _array->size()/2;
       size_type first_size = _array->size() - second_size;
-      bool to_second = _array->to_index(n) > first_size;
+      bool to_second = _array->to_index(n) >= first_size;
 
       new_array->resize(second_size);
       std::copy( _array->begin() + first_size, _array->end(), new_array->begin() );
-      new_array->next_index( _array->next_index() );
-      _array->dec_next_index(  second_size );
+      new_array->next_index = _array->next_index;
+      _array->next_index -= second_size;
       _array->resize(first_size);
       if ( to_second )
       {
@@ -336,26 +410,30 @@ public:
     for ( ;itr!=_main_array->end();++itr)
     {
       _array = *itr;
-      _array->inc_next_index();
+      ++_array->next_index;
     }
-    ++_size;
-    _main_array->inc_next_index();
+    ++_main_array->common_size;
+    this->inc_next_index();
+    update_next_index();
     return true;
   }
 
   /// @return сколько элементов было добавленно
   size_type insert ( size_type n, size_type count, const value_type& x )
   {
+    update_next_index();
     size_type i = 0;
     for (; i < count; ++i )
       if ( this->insert( n, x) )
         return i;
+    update_next_index();
     return i;
   }
 
   template <class InputIterator>
   InputIterator insert ( size_type position, InputIterator first, InputIterator last )
   {
+    update_next_index();
     /// TODO: Это не эффективно
     if ( size_type insert_count = last-first )
     {
@@ -365,11 +443,13 @@ public:
           return first;
       }
     }
+    update_next_index();
     return first;
   }
 
   size_type erase ( size_type position )
   {
+    update_next_index();
     typename index_array::iterator itr = _find_array(position);
     if (itr==_main_array->end())
       throw std::out_of_range("array_of_array::insert");
@@ -386,22 +466,24 @@ public:
     for ( ;itr!=end;++itr)
     {
       _array = *itr;
-      _array->dec_next_index();
+      --_array->next_index;
     }
-    --_size;
-    _main_array->dec_next_index();
-
+    --_main_array->common_size;
+    this->dec_next_index();
+    update_next_index();
     return 1;
   }
 
   /** @return скотлько удалил элементов */
   size_type erase ( size_type first, size_type last )
   {
+    update_next_index();
     /// TODO: Это мега не эффективно
     size_type count = last - first;
     for ( size_type i = 0; i < count; ++i  )
       if ( !this->erase(first) )
         return i;
+    update_next_index();
     return count;
     /*
     typename index_array::iterator itr = _find_array(first);
@@ -477,10 +559,32 @@ public:
 
   main_pointer get_pointer() { return _main_array;}
 
+
+  // Рабивает текущий индекс на два
+  // proxy будет следующим
+  void split( self& proxy )
+  {
+    update_next_index();
+    size_type second_size = _main_array->size() / 2;
+    size_type first_size = _main_array->size() - second_size;
+
+    proxy._main_array->resize(second_size);
+    std::copy( _main_array->begin() + first_size, _main_array->end(), proxy._main_array->begin() );
+    _main_array->resize(first_size);
+    
+    proxy.next_index( next_index() );
+    this->dec_next_index(second_size);
+    _main_array->common_size = first_size;
+    proxy._main_array->common_size = second_size;
+    update_next_index();
+    proxy.update_next_index();
+  }
+
 private:
 
   reference _at(size_type n)
   {
+    update_next_index();
     typename index_array::iterator itr = _find_array(n);
     if (itr==_main_array->end())
       throw std::out_of_range("array_of_array::_at");
@@ -490,6 +594,7 @@ private:
 
   const_reference _at(size_type n) const
   {
+    update_next_index();
     typename index_array::const_iterator itr = _find_array(n);
     if (itr==_main_array->end())
       throw std::out_of_range("array_of_array::_at");
@@ -499,6 +604,7 @@ private:
 
   typename index_array::iterator _find_array(size_type n)
   {
+    update_next_index();
     return
       std::lower_bound(
         _main_array->begin(),
@@ -508,13 +614,14 @@ private:
         {
           _array = iv;
           //std::cout << _main_array->size() << " _find_array: " << _array->next_index << "<" << index + 1 << std::endl;
-          return _array->next_index() < index + 1;
+          return _array->next_index < index + 1;
         }
       );
   }
 
   typename index_array::const_iterator _find_array(size_type n) const
   {
+    update_next_index();
     return
       std::lower_bound(
         _main_array->begin(),
@@ -530,7 +637,7 @@ private:
 
 
 private:
-  size_type _size;
+  // size_type _size;
   main_pointer _main_array;
   mutable array_pointer _array;
   allocator _allocator;

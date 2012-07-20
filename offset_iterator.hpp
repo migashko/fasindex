@@ -17,10 +17,11 @@ public:
     : _offset(offset), _container(&container)
   {}
 
-  value_type* operator->()
-  {
-    return &(_container->at(_offset));
-  }
+  reference operator*()  { return _container->at(_offset); }
+  const reference operator*() const { return _container->at(_offset); }
+
+  pointer operator->()  { return &(_container->at(_offset)); }
+  const pointer operator->() const { return &(_container->at(_offset)); }
 
   self& operator++()
   {

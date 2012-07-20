@@ -81,6 +81,7 @@ public:
   }
 
   size_t size() const { return _size;}
+  bool empty() const { return _size == 0;}
 
   iterator begin() { return iterator(0, *this);}
   const_iterator begin() const { return const_iterator(0, *this);}
@@ -155,18 +156,89 @@ public:
 
     ++_size;
     this->check_next_index();
+    this->debug_check_size();
   }
 
+  iterator insert(iterator itr, const value_type& vt)
+  {
+    size_type position = itr - begin();
+    
+    if ( itr == this->end() )
+    {
+      this->push_back( vt );
+      return begin() + position;
+    }
+
+    typename vector_of_index::iterator index_itr = _find_index( position );
+    if ( index_itr == _vector_of_index.end() )
+      throw std::out_of_range("vector::insert");
+
+    if ( !index_itr->insert(position, vt) )
+    {
+      // требуется разбиение;
+      index_wrapper new_index = _create_vector_of_index();
+      index_itr->split(new_index);
+      _vector_of_index.insert(index_itr+1, new_index);
+
+      index_itr = _find_index( position );
+      if ( index_itr == _vector_of_index.end() )
+        throw std::out_of_range("vector::insert fatal");
+
+      if ( !index_itr->insert(position, vt) )
+        throw std::out_of_range("vector::insert fatal 2");
+    }
+
+    ++_size;
+    // Обновляем все следующие 
+    for ( ++index_itr ;index_itr!=_vector_of_index.end(); ++index_itr)
+      index_itr->inc_next_index();
+    
+    return begin() + position;
+  }
+
+  
   template<typename Iterator>
   void restore(Iterator beg, Iterator end)
   {
-    for ( ;beg!=end; ++beg)
+    std::cout << "pre restore: " << end - beg << std::endl;
+    std::cout << "pre restore: " << _size << std::endl;
+    for ( int i = 0 ;beg!=end; ++beg, ++i)
     {
-      _index_pointer = *beg;
-      _vector_of_index.push_back( index_wrapper(_index_pointer, _value_allocator) );
-      _vector_of_index.back().restor();
+      //_index_pointer = beg.offset;
+      _vector_of_index.push_back( index_wrapper(/*_index_pointer*/beg, _value_allocator) );
+      _vector_of_index.back().restore();
+      _size += _vector_of_index.back().size();
+      std::cout << i << " restore: " << _size << std::endl;
     }
+
+    std::sort(
+      _vector_of_index.begin(),
+      _vector_of_index.end(),
+      [](const typename vector_of_index::value_type& left, const typename vector_of_index::value_type& right) -> bool
+      {
+        return left.next_index() < right.next_index();
+      }
+    );
   }
+
+  void debug_check_size()
+  {
+    size_t size = 0;
+    std::for_each(
+      _vector_of_index.begin(),
+      _vector_of_index.end(),
+      [this, &size](typename vector_of_index::value_type& proxy)
+      {
+        size += proxy.size();
+        proxy.debug_check_size();
+      }
+    );
+    
+    if ( size!=_size)
+      throw std::logic_error("vector::debug_check_size()");
+  }
+
+  
 private:
 
   reference _at(size_type position)
@@ -230,7 +302,7 @@ private:
   typename vector_of_index::iterator _find_index(size_type position)
   {
     // Можно указать следующий за последним
-    if ( position > _size )
+    if ( position >= _size )
       throw std::out_of_range("vector_list::_find_index");
 
     return std::lower_bound(

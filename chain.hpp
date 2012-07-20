@@ -40,7 +40,15 @@ struct chain
   {
     size_t offset = (char*)value - (char*)this->first_chunk()/*->begin()*/;
     chunk_type* chk = first_chunk() + offset/sizeof(chunk_type);
-    return chk->next_value(value);
+    T* result =  chk->next_value(value);
+    if ( result == 0)
+    {
+      ++chk;
+      if ( static_cast<size_t>(chk - this->first_chunk()) == size )
+        return 0;
+      result = chk->first_value();
+    }
+    return result;
   }
 
   chunk_type* first_occuped()

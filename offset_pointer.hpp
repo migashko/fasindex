@@ -179,7 +179,8 @@ inline typename offset_pointer<T, M>::difference_type operator -
   )
 {
   typename offset_pointer<T, M>::difference_type dist = 0;
-  for ( ;r2!=r1; ++dist, ++r2);
+  for ( ;r2!=r1; ++r2) ++dist;
+  std::cout << "dist -------------> " << dist << std::endl;
   return dist;
   //return r1.offset - r2.offset;
 }

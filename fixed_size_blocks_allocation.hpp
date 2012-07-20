@@ -113,7 +113,8 @@ public:
     {
       if ( T* current = chn->next_value( reinterpret_cast<T*>(_memory_manager->addr() + offset) ) )
         offset = reinterpret_cast<char*>(current) - _memory_manager->addr();
-      return static_cast<size_t>(-1);
+      else
+        return static_cast<size_t>(-1);
     }
     return offset;
   }
