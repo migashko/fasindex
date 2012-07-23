@@ -98,19 +98,20 @@ public:
       return true;
     if ( _main_array->empty() )
     {
-      // TODO: Сброисть или исключение 
+      // TODO: Сброисть или исключение
       return true;
     }
     size_t current_size = 0;
     std::cout << "update_next_index()" << std::endl;
-    _array = *(_main_array->last()); 
+    _array = *(_main_array->last());
     size_type current_next_index = /*this->next_index();*/ _array->next_index;
+    _main_array->next_index = current_next_index;
     std::for_each(
       _main_array->rbegin(),
       _main_array->rend(),
       [this, &current_next_index, &current_size](const index_type& ind)
       {
-        
+
         _array = ind;
         std::cout << "update_next_index: " << current_next_index << " size: " << _array->size() << std::endl;
         _array->next_index = current_next_index;
@@ -122,7 +123,7 @@ public:
     _main_array->common_size = current_size;
     std::cout << "_main_array->common_size: " << _main_array->common_size << std::endl;
     return true;
-  } 
+  }
 
 
   reference operator[](size_type n) { return this->at(n); }
@@ -131,15 +132,15 @@ public:
   const_reference at ( size_type n ) const { return this->_at(n); }
   reference at ( size_type n ) { return this->_at(n); }
 
-  reference front ( ){ /*return _data[0];*/ }
-  const_reference front ( ) const { /*return _data[0];*/ }
-  reference back ( ){ /*return _data[_size-1];*/ }
-  const_reference back ( ) const{ /*return _data[_size-1];*/ }
+  reference front ( ){ throw; /*return _data[0];*/ }
+  const_reference front ( ) const { throw;/*return _data[0];*/ }
+  reference back ( ){ throw;/*return _data[_size-1];*/ }
+  const_reference back ( ) const{ throw;/*return _data[_size-1];*/ }
 
   bool filled () const { return _main_array->filled();}
 
 
-  
+
   size_type size() const { return _main_array->common_size;}
   /*
   size_type max_size() const { return N;}
@@ -206,7 +207,7 @@ public:
 
     if ( size!=_main_array->common_size)
       throw std::logic_error("debug_check_size()");
-    
+
   }
 
   void check_next_index()
@@ -271,6 +272,7 @@ public:
   template <class InputIterator>
   InputIterator assign ( InputIterator first, InputIterator last )
   {
+    throw;
     /*
     std::copy( first, last, _data );
     _size = std::distance(first, last);
@@ -280,6 +282,7 @@ public:
   /** @return сколько осталось */
   size_type assign ( size_type n, const value_type& u )
   {
+    throw;
     /*std::fill_n( begin(), n, u );
     _size = n;
     */
@@ -327,6 +330,7 @@ public:
 
   void pop_back( )
   {
+    throw;
     /*
     if ( _main_array->empty() )
       throw std::out_of_range("pop_back");
@@ -375,7 +379,7 @@ public:
   bool insert( size_type n, const value_type& x )
   {
     update_next_index();
-    
+
     if ( n == this->next_index() )
       return push_back(x);
 
@@ -585,7 +589,7 @@ public:
     std::cout << "_main_array->size(): " << _main_array->size() << std::endl;
     size_type second_size = _main_array->size() / 2;
     size_type first_size = _main_array->size() - second_size;
-    
+
     proxy._main_array->resize(second_size);
     std::copy( _main_array->begin() + first_size, _main_array->end(), proxy._main_array->begin() );
     _main_array->resize(first_size);
@@ -594,7 +598,7 @@ public:
     proxy.update_next_index(true);
     std::cout << "} void split" << std::endl;
 
-    
+
     /*
     std::cout << "void split{ " << std::endl;
     std::cout << "next_index() " << next_index() << std::endl;

@@ -37,18 +37,22 @@ void test_insert_fill(vector_type& v)
   size_t index = 0;
   for (size_t i = 0 ; i <  MAX_COUNT/4; ++i)
   {
-    //std::cout << index << std::endl;
+    std::cout << "----- insert ----- 1 " << index << std::endl;
     v.insert(v.begin(), data(index++) );
+    std::cout << "----- insert ----- 2 " << index << std::endl;
+    std::for_each(v.begin(), v.end(), [](const data& d) { std::cout << d.index << ",";} ); std::cout << std::endl;
+    std::cout << "----- insert ----- 3 " << index << std::endl;
   }
 
   //std::for_each(v.begin(), v.end(), [](const data& d) { std::cout << d.index << ",";} ); std::cout << std::endl;
   std::reverse(v.begin(), v.end() );
   //std::for_each(v.begin(), v.end(), [](const data& d) { std::cout << d.index << ",";} ); std::cout << std::endl;
-  
+
 }
 
 void test_insert_check(vector_type& v)
 {
+  std::cout << "void test_insert_check(vector_type& v)" << std::endl;
   size_t index = 0;
   for (size_t i = 0 ; i <  MAX_COUNT/4; ++i)
   {
@@ -96,8 +100,8 @@ void test_insert(bool clear)
     }
     std::sort(tmp.begin(), tmp.end(), [](const data& f, const data& s)->bool { return f.index < s.index; });
     std::for_each(tmp.begin(), tmp.end(), [](const data& d) { std::cout << d.index << "->";} ); std::cout << std::endl;
-    
-    
+
+
   }
   std::cout << "insert check" << std::endl;
   test_insert_check(v);
@@ -193,6 +197,6 @@ int main(int argc, char* argv[])
   test_insert(argc > 1);
   rlimit rl={1024*1024*1024, 1024*1024*1024 };
   setrlimit(RLIMIT_DATA, &rl );
-  
+
   return 0;
 }
