@@ -92,22 +92,35 @@ public:
     return _main_array->next_index;
   }
 
-  bool update_next_index()
+  bool update_next_index(bool force = false)
   {
-    if ( !_main_array->flag )
+    if ( !force && !_main_array->flag )
       return true;
-    size_type current_next_index = this->next_index();
+    if ( _main_array->empty() )
+    {
+      // TODO: Сброисть или исключение 
+      return true;
+    }
+    size_t current_size = 0;
+    std::cout << "update_next_index()" << std::endl;
+    _array = *(_main_array->last()); 
+    size_type current_next_index = /*this->next_index();*/ _array->next_index;
     std::for_each(
       _main_array->rbegin(),
       _main_array->rend(),
-      [this, &current_next_index](const index_type& ind)
+      [this, &current_next_index, &current_size](const index_type& ind)
       {
+        
         _array = ind;
+        std::cout << "update_next_index: " << current_next_index << " size: " << _array->size() << std::endl;
         _array->next_index = current_next_index;
         current_next_index -= _array->size();
+        current_size+= _array->size();
       }
     );
-    _main_array->flag = false;
+    _main_array->flag =  false;
+    _main_array->common_size = current_size;
+    std::cout << "_main_array->common_size: " << _main_array->common_size << std::endl;
     return true;
   } 
 
@@ -220,14 +233,14 @@ public:
 
   void show_last_index()
   {
-    update_next_index();
+    //update_next_index();
     std::for_each(
       _main_array->begin(),
       _main_array->end(),
       [this](index_type& ind)
       {
         _array = ind;
-        std::cout << _array->next_index() << "->";
+        std::cout << _array->next_index << "->";
       }
     );
     std::cout << std::endl;
@@ -383,6 +396,7 @@ public:
     {
       if ( _main_array->filled() )
         return false;
+      std::cout << "local split: " << x.index << std::endl;
       array_pointer new_array = _allocator.allocate(1);
       _allocator.construct(new_array, array_type());
       new_array = *(_main_array->insert(itr+1, new_array));
@@ -411,7 +425,9 @@ public:
     {
       _array = *itr;
       ++_array->next_index;
+      std::cout << ":" << _array->next_index;
     }
+    std::cout << ":" << std::endl;
     ++_main_array->common_size;
     this->inc_next_index();
     update_next_index();
@@ -564,20 +580,51 @@ public:
   // proxy будет следующим
   void split( self& proxy )
   {
+    std::cout << "void split{ " << std::endl;
+    std::cout << "_main_array->common_size: " << _main_array->common_size << std::endl;
+    std::cout << "_main_array->size(): " << _main_array->size() << std::endl;
+    size_type second_size = _main_array->size() / 2;
+    size_type first_size = _main_array->size() - second_size;
+    
+    proxy._main_array->resize(second_size);
+    std::copy( _main_array->begin() + first_size, _main_array->end(), proxy._main_array->begin() );
+    _main_array->resize(first_size);
+
+    update_next_index(true);
+    proxy.update_next_index(true);
+    std::cout << "} void split" << std::endl;
+
+    
+    /*
+    std::cout << "void split{ " << std::endl;
+    std::cout << "next_index() " << next_index() << std::endl;
+    show_last_index();
     update_next_index();
     size_type second_size = _main_array->size() / 2;
     size_type first_size = _main_array->size() - second_size;
+    std::cout << "second_size " << second_size << std::endl;
+    std::cout << "first_size " << first_size << std::endl;
 
     proxy._main_array->resize(second_size);
     std::copy( _main_array->begin() + first_size, _main_array->end(), proxy._main_array->begin() );
     _main_array->resize(first_size);
-    
     proxy.next_index( next_index() );
-    this->dec_next_index(second_size);
-    _main_array->common_size = first_size;
+    //this->dec_next_index(second_size);
+    // Ахтунг!! Необходимо вычислить новый размер второй копии proxy
     proxy._main_array->common_size = second_size;
+    _main_array->common_size = first_size;
+    proxy.update_next_index();
+    std::cout << "proxy.size() " << proxy.size() << std::endl;
+    this->dec_next_index(proxy.size());
+    //update_next_index();
+    std::cout << "next_index() " << next_index() << std::endl;
+    std::cout << "proxy.next_index() " << proxy.next_index() << std::endl;
+    show_last_index();
     update_next_index();
     proxy.update_next_index();
+    show_last_index();
+    std::cout << "} void split" << std::endl;
+    */
   }
 
 private:

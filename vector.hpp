@@ -76,7 +76,7 @@ public:
     _index_allocator.deallocate(_index_pointer, 1);
     /*
     _value_pointer = _value_allocator.allocate(1);
-    _value_allocator.deallocate(_value_pointer,1);
+    _value_allocator.deallocate(,1);
     */
   }
 
@@ -175,6 +175,7 @@ public:
 
     if ( !index_itr->insert(position, vt) )
     {
+      std::cout << "main split" << vt.index << std::endl;
       // требуется разбиение;
       index_wrapper new_index = _create_vector_of_index();
       index_itr->split(new_index);
@@ -208,7 +209,9 @@ public:
       _vector_of_index.push_back( index_wrapper(/*_index_pointer*/beg, _value_allocator) );
       _vector_of_index.back().restore();
       _size += _vector_of_index.back().size();
-      std::cout << i << " restore: " << _size << std::endl;
+
+      //_index_pointer = _vector_of_index.back().back();
+      //std::cout << i << " restore: " << _size << " index=" << (begin() + (_size - 1))->index  << std::endl;
     }
 
     std::sort(

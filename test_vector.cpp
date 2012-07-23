@@ -23,7 +23,8 @@ struct data
   size_t buffer[8];
 };
 
-typedef allocator_helper<data>::mmap<3, 3> helper;
+//typedef allocator_helper<data>::mmap<3, 3> helper;
+typedef allocator_helper<data>::mmap<4, 4> helper;
 typedef vector<data, helper::value_allocator, helper::index_allocator> vector_type;
 
 /// //////////////////////////////////////////////////
@@ -51,7 +52,7 @@ void test_insert_check(vector_type& v)
   size_t index = 0;
   for (size_t i = 0 ; i <  MAX_COUNT/4; ++i)
   {
-      //std::cout << "i=" << i << std::endl;
+      std::cout << " i=" << i /*<< std::endl*/;
       int value = v[index].index ;
       if ( value != i )
       {
@@ -60,6 +61,7 @@ void test_insert_check(vector_type& v)
       }
       index++;
   }
+  std::cout << std::endl;
 }
 
 void test_insert(bool clear)
@@ -80,10 +82,8 @@ void test_insert(bool clear)
   v.restore(iam.begin(), iam.end());
   std::cout << "insert check dst2: " << iam.end() - iam.begin() << std::endl;
   if ( v.empty() )
-    
     test_insert_fill(v);
   std::cout << "insert check dst3: " << iam.end() - iam.begin() << std::endl;
-  
   {
 
     value_pointer vbeg = vam.begin();
@@ -95,7 +95,7 @@ void test_insert(bool clear)
       std::for_each(vbeg->begin(), vbeg->end(), [&tmp](const data& d){tmp.push_back(d); });
     }
     std::sort(tmp.begin(), tmp.end(), [](const data& f, const data& s)->bool { return f.index < s.index; });
-    //std::for_each(tmp.begin(), tmp.end(), [](const data& d) { std::cout << d.index << "->";} ); std::cout << std::endl;
+    std::for_each(tmp.begin(), tmp.end(), [](const data& d) { std::cout << d.index << "->";} ); std::cout << std::endl;
     
     
   }
