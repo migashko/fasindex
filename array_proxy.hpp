@@ -92,6 +92,21 @@ public:
     return _main_array->next_index;
   }
 
+  void update_size()
+  {
+    size_t current_size = 0;
+    std::for_each(
+      _main_array->begin(),
+      _main_array->end(),
+      [this, &current_size](const index_type& ind)
+      {
+        _array = ind;
+        current_size+= _array->size();
+      }
+    );
+    _main_array->common_size = current_size;
+  }
+
   bool update_next_index(bool force = false)
   {
     if ( !force && !_main_array->flag )
@@ -102,10 +117,10 @@ public:
       return true;
     }
     size_t current_size = 0;
-    std::cout << "update_next_index()" << std::endl;
-    _array = *(_main_array->last());
-    size_type current_next_index = /*this->next_index();*/ _array->next_index;
-    _main_array->next_index = current_next_index;
+    
+    //_array = *(_main_array->last());
+    size_type current_next_index = this->next_index(); // _array->next_index;
+    //_main_array->next_index = current_next_index;
     std::for_each(
       _main_array->rbegin(),
       _main_array->rend(),
@@ -113,15 +128,15 @@ public:
       {
 
         _array = ind;
-        std::cout << "update_next_index: " << current_next_index << " size: " << _array->size() << std::endl;
+        
         _array->next_index = current_next_index;
         current_next_index -= _array->size();
         current_size+= _array->size();
       }
     );
     _main_array->flag =  false;
-    _main_array->common_size = current_size;
-    std::cout << "_main_array->common_size: " << _main_array->common_size << std::endl;
+    //_main_array->common_size = current_size;
+    
     return true;
   }
 
@@ -142,6 +157,9 @@ public:
 
 
   size_type size() const { return _main_array->common_size;}
+
+  bool proxy_empty () const { return _main_array->empty(); }
+  size_type proxy_size () const { return _main_array->size(); }
   /*
   size_type max_size() const { return N;}
   size_type capacity() const { return N;}
@@ -229,6 +247,27 @@ public:
       }
     );
     */
+  }
+
+  void dump() const
+  {
+    std::for_each(
+      _main_array->begin(),
+      _main_array->end(),
+      [this](const index_type& ind)
+      {
+        _array = ind;
+        std::cout << _array->size() << ":[";
+        std::for_each(
+          _array->begin(),
+          _array->end(),
+          [](const value_type& value)
+          {
+            std::cout << value.index << ",";
+          });
+        std::cout << "]:" << _array->next_index << ",";
+      }
+    );
   }
 
 
@@ -378,6 +417,7 @@ public:
   // n - перед каким вставлять
   bool insert( size_type n, const value_type& x )
   {
+    //std::cout << "insert { " << n << std::endl;
     update_next_index();
 
     if ( n == this->next_index() )
@@ -388,7 +428,8 @@ public:
       throw std::out_of_range("array_of_array::insert");
 
     _array = *itr;
-    if ( _array->to_index(n) == 0 && itr!=_main_array->begin())
+    // bool push_back_flag = false;
+    if ( _array->to_index(n) == 0 && itr!=_main_array->begin() )
     {
       --itr;
       _array = *itr;
@@ -400,7 +441,7 @@ public:
     {
       if ( _main_array->filled() )
         return false;
-      std::cout << "local split: " << x.index << std::endl;
+      
       array_pointer new_array = _allocator.allocate(1);
       _allocator.construct(new_array, array_type());
       new_array = *(_main_array->insert(itr+1, new_array));
@@ -419,7 +460,6 @@ public:
       {
          ++itr;
         _array = *itr;
-
       }
     }
 
@@ -429,12 +469,12 @@ public:
     {
       _array = *itr;
       ++_array->next_index;
-      std::cout << ":" << _array->next_index;
     }
-    std::cout << ":" << std::endl;
+
     ++_main_array->common_size;
     this->inc_next_index();
     update_next_index();
+    //std::cout << "} insert " << n << std::endl;
     return true;
   }
 
@@ -584,9 +624,6 @@ public:
   // proxy будет следующим
   void split( self& proxy )
   {
-    std::cout << "void split{ " << std::endl;
-    std::cout << "_main_array->common_size: " << _main_array->common_size << std::endl;
-    std::cout << "_main_array->size(): " << _main_array->size() << std::endl;
     size_type second_size = _main_array->size() / 2;
     size_type first_size = _main_array->size() - second_size;
 
@@ -594,9 +631,13 @@ public:
     std::copy( _main_array->begin() + first_size, _main_array->end(), proxy._main_array->begin() );
     _main_array->resize(first_size);
 
+    update_size();
+    proxy.update_size();
+    proxy.next_index( this->next_index() );
+    this->dec_next_index( proxy.size() );
+    
     update_next_index(true);
     proxy.update_next_index(true);
-    std::cout << "} void split" << std::endl;
 
 
     /*

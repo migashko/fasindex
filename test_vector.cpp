@@ -31,91 +31,6 @@ typedef vector<data, helper::value_allocator, helper::index_allocator> vector_ty
 /// //////////////////////////////////////////////////
 /// //////////////////////////////////////////////////
 
-
-void test_insert_fill(vector_type& v)
-{
-  size_t index = 0;
-  for (size_t i = 0 ; i <  MAX_COUNT/4; ++i)
-  {
-    std::cout << "----- insert ----- 1 " << index << std::endl;
-    v.insert(v.begin(), data(index++) );
-    std::cout << "----- insert ----- 2 " << index << std::endl;
-    std::for_each(v.begin(), v.end(), [](const data& d) { std::cout << d.index << ",";} ); std::cout << std::endl;
-    std::cout << "----- insert ----- 3 " << index << std::endl;
-  }
-
-  //std::for_each(v.begin(), v.end(), [](const data& d) { std::cout << d.index << ",";} ); std::cout << std::endl;
-  std::reverse(v.begin(), v.end() );
-  //std::for_each(v.begin(), v.end(), [](const data& d) { std::cout << d.index << ",";} ); std::cout << std::endl;
-
-}
-
-void test_insert_check(vector_type& v)
-{
-  std::cout << "void test_insert_check(vector_type& v)" << std::endl;
-  size_t index = 0;
-  for (size_t i = 0 ; i <  MAX_COUNT/4; ++i)
-  {
-      std::cout << " i=" << i /*<< std::endl*/;
-      int value = v[index].index ;
-      if ( value != i )
-      {
-        v.show_last_index();
-        exit(1);
-      }
-      index++;
-  }
-  std::cout << std::endl;
-}
-
-void test_insert(bool clear)
-{
-  helper::buffer_type index_buffer;
-  helper::buffer_type value_buffer;
-
-  index_buffer.open("insert_index.bin", 1000);
-  value_buffer.open("insert.bin", 1000);
-
-  helper::index_allocate_manager iam(index_buffer);
-  helper::value_allocate_manager vam(value_buffer);
-  typedef helper::index_allocate_manager::pointer index_pointer;
-  typedef helper::value_allocate_manager::pointer value_pointer;
-
-  vector_type v = vector_type( helper::value_allocator(vam), helper::index_allocator(iam) );
-  std::cout << "insert check dst1: " << iam.end() - iam.begin() << std::endl;
-  v.restore(iam.begin(), iam.end());
-  std::cout << "insert check dst2: " << iam.end() - iam.begin() << std::endl;
-  if ( v.empty() )
-    test_insert_fill(v);
-  std::cout << "insert check dst3: " << iam.end() - iam.begin() << std::endl;
-  {
-
-    value_pointer vbeg = vam.begin();
-    value_pointer vend = vam.end();
-
-    std::vector<data> tmp;
-    for ( ; vbeg!=vend; ++vbeg)
-    {
-      std::for_each(vbeg->begin(), vbeg->end(), [&tmp](const data& d){tmp.push_back(d); });
-    }
-    std::sort(tmp.begin(), tmp.end(), [](const data& f, const data& s)->bool { return f.index < s.index; });
-    std::for_each(tmp.begin(), tmp.end(), [](const data& d) { std::cout << d.index << "->";} ); std::cout << std::endl;
-
-
-  }
-  std::cout << "insert check" << std::endl;
-  test_insert_check(v);
-  if (clear)
-  {
-    std::cout << "insert clear" << std::endl;
-    v.clear();
-  }
-}
-
-/// //////////////////////////////////////////////////
-/// //////////////////////////////////////////////////
-/// //////////////////////////////////////////////////
-
 void test_push_back_fill_impl(int count, vector_type& v)
 {
   for (int i = 0; i < count; ++i )
@@ -148,7 +63,7 @@ void test_push_back_check(vector_type& v)
       int value = v[n].index;
       if ( value != j )
       {
-        std::cout << "fail" << std::endl;
+        std::cout << "FAIL" << std::endl;
         v.show_last_index();
         exit(1);
       }
@@ -171,21 +86,162 @@ void test_push_back(bool clear)
   typedef helper::index_allocate_manager::pointer index_pointer;
 
   vector_type v = vector_type( helper::value_allocator(vam), helper::index_allocator(iam) );
-  std::cout << "push_back restore " <<  iam.end() - iam.begin() << std::endl;
   v.restore(iam.begin(), iam.end());
   if ( v.empty() )
-  {
-    std::cout << "push_back fill" << std::endl;
     test_push_back_fill(v);
-  }
-  std::cout << "push_back check" << std::endl;
   test_push_back_check(v);
   if (clear)
-  {
-    std::cout << "push_back clear" << std::endl;
     v.clear();
-  }
 }
+
+
+/// //////////////////////////////////////////////////
+/// //////////////////////////////////////////////////
+/// //////////////////////////////////////////////////
+
+
+void test_insert_fill(vector_type& v)
+{
+  size_t index = 0;
+  for (size_t i = 0 ; i <  MAX_COUNT/4; ++i)
+  {
+    v.insert(v.begin(), data(index++) );
+  }
+  for (size_t i = 0 ; i <  MAX_COUNT/4; ++i)
+  {
+    index++;
+    //std::cout << MAX_COUNT - MAX_COUNT/4 + i << " "; 
+    v.insert(v.begin() + MAX_COUNT/4, data(MAX_COUNT - MAX_COUNT/4 + i ) );
+  }
+  std::cout << std::endl;
+  std::cout << "-------------------" << std::endl;
+  std::cout << std::endl;
+  for (size_t i = 0 ; i <  (MAX_COUNT/2/* - MAX_COUNT/4*/) ; ++i)
+  {
+    index++;
+    //std::cout << MAX_COUNT/2 - MAX_COUNT/4 + i << " "; 
+    v.insert(v.begin() + MAX_COUNT/4, data(MAX_COUNT/2 - MAX_COUNT/4 + i) );
+  }
+  std::cout << std::endl;
+
+  if (v.size() != MAX_COUNT)
+  {
+    std::cout << "insert FAIL " << v.size() << "!=" << MAX_COUNT << " index=" << index << std::endl;
+    exit(1);
+  }
+  
+  std::reverse(v.begin(), v.begin() + MAX_COUNT/4 );
+  std::reverse(v.begin() + MAX_COUNT/4 , v.begin() + MAX_COUNT/4 + MAX_COUNT/2 );
+  std::reverse(v.begin() + MAX_COUNT/4 + MAX_COUNT/2 , v.end());
+  std::cout << MAX_COUNT/4 << std::endl;
+  std::cout << MAX_COUNT/4 + MAX_COUNT/2 << std::endl;
+}
+
+void test_insert_check(vector_type& v)
+{
+  std::cout << "test_insert_check(vector_type& v)" << std::endl;
+  size_t index = 0;
+  for (size_t i = 0 ; i <  MAX_COUNT; ++i)
+  {
+      int value = v[index].index ;
+      if ( value != i )
+      {
+        std::cout << "FAIL " << i << std::endl;
+        v.dump();
+        exit(1);
+      }
+      index++;
+  }
+ 
+}
+
+void test_insert(bool clear)
+{
+  std::cout << "test_insert" << std::endl;
+  helper::buffer_type index_buffer;
+  helper::buffer_type value_buffer;
+
+  index_buffer.open("insert_index.bin", 1000);
+  value_buffer.open("insert.bin", 1000);
+
+  helper::index_allocate_manager iam(index_buffer);
+  helper::value_allocate_manager vam(value_buffer);
+  typedef helper::index_allocate_manager::pointer index_pointer;
+  typedef helper::value_allocate_manager::pointer value_pointer;
+
+  vector_type v = vector_type( helper::value_allocator(vam), helper::index_allocator(iam) );
+  
+  v.restore(iam.begin(), iam.end());
+  
+  if ( v.empty() )
+    test_insert_fill(v);
+  
+  test_insert_check(v);
+  if (clear)
+    v.clear();
+}
+
+/// //////////////////////////////////////////////////
+/// //////////////////////////////////////////////////
+/// //////////////////////////////////////////////////
+
+void test_erase_fill(vector_type& v)
+{
+  std::cout << "test_erase_fill(vector_type& v)" << std::endl;
+  size_t size = v.size();
+  for ( size_t i = 0 ; i < size/2; ++i)
+    v.erase(v.begin() + i);
+}
+
+void test_erase_check(vector_type& v)
+{
+  std::cout << "test_erase_check(vector_type& v)" << std::endl;
+  size_t index = 1;
+  for (size_t i = 0 ; i <  MAX_COUNT/2; ++i, index+=2)
+  {
+      int value = v[i].index ;
+      if ( value != index )
+      {
+        v.dump();
+        std::cout << "erase check FAIL i=" << i << " index=" << index << std::endl;
+        //v.show_last_index();
+        exit(1);
+      }
+      //index++;
+  }
+
+}
+
+
+void test_erase(bool clear)
+{
+  std::cout << "test_erase" << std::endl;
+  helper::buffer_type index_buffer;
+  helper::buffer_type value_buffer;
+
+  index_buffer.open("erase_index.bin", 1000);
+  value_buffer.open("erase.bin", 1000);
+
+  helper::index_allocate_manager iam(index_buffer);
+  helper::value_allocate_manager vam(value_buffer);
+  typedef helper::index_allocate_manager::pointer index_pointer;
+  typedef helper::value_allocate_manager::pointer value_pointer;
+
+  vector_type v = vector_type( helper::value_allocator(vam), helper::index_allocator(iam) );
+
+  v.restore(iam.begin(), iam.end());
+
+  if ( v.empty() )
+  {
+    test_insert_fill(v);
+    test_erase_fill(v);
+  }
+
+  test_erase_check(v);
+  if (clear)
+    v.clear();
+}
+
 
 /// //////////////////////////////////////////////////
 /// //////////////////////////////////////////////////
@@ -193,8 +249,9 @@ void test_push_back(bool clear)
 
 int main(int argc, char* argv[])
 {
- // test_push_back( argc > 1 );
+  test_push_back( argc > 1 );
   test_insert(argc > 1);
+  test_erase(argc > 1);
   rlimit rl={1024*1024*1024, 1024*1024*1024 };
   setrlimit(RLIMIT_DATA, &rl );
 
