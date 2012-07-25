@@ -41,6 +41,8 @@ public:
   typedef T value_type;
   typedef T& reference;
   typedef const T& const_reference;
+  typedef T* pointer;
+  typedef const T* const_pointer;
 
   typedef A1 value_allocator;
   typedef A2 index_allocator;
@@ -55,6 +57,13 @@ public:
 
   typedef offset_iterator<T, self> iterator;
   typedef offset_iterator<const T, self> const_iterator;
+
+  typedef std::reverse_iterator<iterator> reverse_iterator;
+  typedef const std::reverse_iterator<iterator> const_reverse_iterator;
+
+  typedef typename value_allocator::difference_type difference_type;
+
+  
 
   vector(value_allocator a1, index_allocator a2 )
     : _size(0)

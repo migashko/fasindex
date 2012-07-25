@@ -1,5 +1,6 @@
 #ifndef OFFSET_ITERATOR_HPP
 #define OFFSET_ITERATOR_HPP
+#include <iterator>
 
 template<typename T, typename Container>
 class offset_iterator
@@ -16,6 +17,17 @@ public:
   offset_iterator(difference_type offset, container_type& container)
     : _offset(offset), _container(&container)
   {}
+
+  offset_iterator(const self& slf)
+    : _offset(slf._offset)
+    , _container(slf._container)
+  {}
+
+  /*template<typename TT>
+  offset_iterator(const offset_iterator<TT, Container>& slf)
+    : _offset(slf._offset)
+    , _container(slf._container)
+  {}*/
 
   reference operator*()  { return _container->at(_offset); }
   const reference operator*() const { return _container->at(_offset); }
@@ -126,7 +138,7 @@ inline offset_iterator<T, M> operator +
 }
 
 template<typename T, typename M, typename Dist>
-inline offset_pointer<T, M> operator -
+inline offset_iterator<T, M> operator -
   (
     offset_iterator<T, M> r,
     Dist n

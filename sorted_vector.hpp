@@ -1,169 +1,239 @@
 #ifndef SORTED_VECTOR_HPP
 #define SORTED_VECTOR_HPP
 
+#include <algorithm>
+#include <functional>
+
 template<
   typename Container,
-  typename Comparator
+  typename Comparator = std::less< typename Container::value_type >
 >
-class sorted_vector
+class sorted_vector_base
 {
-  typedef sorted_vector<Container, Comparator> self;
+  typedef sorted_vector_base<Container, Comparator> self;
 public:
   typedef Container container;
   typedef Comparator comparator;
 
-  typedef T value_type;
-  typedef T data_type[N];
-  typedef size_t size_type;
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef T* pointer;
-  typedef const T* const_pointer;
-  typedef pointer iterator;
-  typedef const_pointer const_iterator;
-  typedef std::reverse_iterator<iterator> reverse_iterator;
-  typedef const std::reverse_iterator<iterator> const_reverse_iterator;
-  typedef std::ptrdiff_t difference_type;
+  typedef typename container::value_type value_type;
+  typedef typename container::size_type size_type;
+  typedef typename container::reference reference;
+  typedef typename container::const_reference const_reference;
+  typedef typename container::pointer pointer;
+  typedef typename container::const_pointer const_pointer;
+  typedef typename container::iterator iterator;
+  typedef typename container::const_iterator const_iterator;
+  typedef typename container::reverse_iterator reverse_iterator;
+  typedef typename container::const_reverse_iterator const_reverse_iterator;
+  typedef typename container::difference_type difference_type;
 
-  sorted_vector(): _comparator(), _container() {};
-
-  reference operator[](size_type n)
-  {
-    return this->at(n);
-  }
+  sorted_vector_base(container cnt = container(), comparator cmp = comparator() ): _comparator(cmp), _container(cnt) {};
 
   const_reference operator[](size_type n) const
   {
-    return this->at(n);
+    return _container[n];
   }
 
-  const_reference at ( size_type n ) const
+  const_reference at( size_type n ) const
   {
-    if ( n < _size)
-      return _data[n];
-    throw std::out_of_range("array::at");
+    return _container->at(n);
   }
 
-  reference at ( size_type n )
+  const_reference front ( ) const { return _container.front(); }
+  const_reference back ( ) const{ return _container.back(); }
+
+  size_type size() const  { return _container.size();}
+  size_type max_size() const { return _container.max_size();}
+  size_type capacity() const { return _container.capacity();}
+  bool empty () const {return _container.empty();}
+  
+  void resize ( size_type sz, value_type value = value_type() )
   {
-    if ( n < _size )
-      return _data[n];
-    throw std::out_of_range("array::at");
+    _container.resize( sz, value );
   }
-  reference front ( ){ return _data[0]; }
-  const_reference front ( ) const{ return _data[0]; }
-  reference back ( ){ return _data[_size-1]; }
-  const_reference back ( ) const{ return _data[_size-1]; }
-
-  size_type size() const { return _size;}
-  size_type max_size() const { return N;}
-  size_type capacity() const { return N;}
-  bool empty () const {return _size==0;}
-  bool filled () const { return _size == N;}
-  void resize ( size_type sz, T value = value_type() )
-  {
-    if (sz > _size)
-      std::fill_n( end(), sz - _size, value );
-    _size = sz;
-  }
-  void reserve ( size_type n ) {}
-
-  reverse_iterator rbegin() { return reverse_iterator(end()/*+_size-1*/); }
-  const_reverse_iterator rbegin() const { return const_reverse_iterator(/*begin()+_size-1*/end()); }
-
-  reverse_iterator rend() { return reverse_iterator(/*begin()-1*/begin()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(/*begin()-1*/begin()); }
-
-  iterator begin() { return _data;}
-  const_iterator begin() const { return _data;}
-  iterator end() { return _data + _size;}
-  const_iterator end() const { return _data + _size;}
-  iterator last() { return _data + _size - 1;}
-  const_iterator last() const { return _data  + _size - 1;}
-
-  void clear()
-  {
-    std::fill_n( begin(), N, T() );
-    _size = 0;
-  }
-
+  
+  void reserve ( size_type n ) { _container.reserve(n); }
+  const_reverse_iterator rbegin() const { return _container.rbegin(); }
+  const_reverse_iterator rend() const { return _container.rend(); }
+  const_iterator begin() const { return _container.begin();}
+  const_iterator end() const { return _container.rend();}
+  
+  void clear() { _container.clear(); }
 
   template <class InputIterator>
   void assign ( InputIterator first, InputIterator last )
   {
-    std::copy( first, last, _data );
-    _size = std::distance(first, last);
+    _container.assign(first, last);
+    std::sort(_container.begin(), _container.end(), _comparator);
   }
 
-  void assign ( size_type n, const T& u )
+  void assign ( size_type n, const value_type& u )
   {
-    std::fill_n( begin(), n, u );
-    _size = n;
+    _container.assign(n, u);
   }
 
-  void push_back ( const T& x )
-  {
-    _data[_size++] = x;
-  }
+  
+  // void push_back ( const T& x ) {  }
 
-  void pop_back ( )
-  {
-    --_size;
-  }
-
-  iterator insert ( iterator position, const T& x )
-  {
-    if ( this->size() + 1 > this->capacity() )
-      throw std::out_of_range("array::insert");
-
-    std::copy_backward(position, end(), end()+1);
-    *position = x;
-    ++_size;
-    return position;
-  }
-
-  void insert ( iterator position, size_type n, const T& x )
-  {
-    if ( this->size() + n > this->capacity() )
-      throw std::out_of_range("array::insert");
-    std::copy_backward(position, end(), end()+n);
-    std::fill_n(position, n, x);
-    _size+=n;
-  }
-
-  template <class InputIterator>
-  void insert ( iterator position, InputIterator first, InputIterator last )
-  {
-    typename InputIterator::difference_type dist = std::distance(first,last);
-    if ( this->size() + dist > this->capacity() )
-      throw std::out_of_range("array::insert");
-
-    std::copy_backward(position, end(), end()+dist );
-    std::copy(first, last, position);
-    _size+=std::distance(first,last);
-  }
+  void pop_back ( ) {  _container.pop_back();  }
 
   iterator erase ( iterator position )
   {
-    std::copy( position + 1, this->end(), position);
-    this->resize( _size - 1 );
-    return position;
+    return _container.erase(position);
   }
 
   iterator erase ( iterator first, iterator last )
   {
-    difference_type dist = last - first;
-    std::copy( last, this->end(), first);
-    this->resize( _size - dist );
-    return first;
+    return _container.erase(first, last);
   }
 
-  
-  
+/// ext. interface
 
-private:
+  container& get_container() { return _container; }
+  const container& get_container() const { return _container; }
+
+protected:
   comparator _comparator;
   container  _container;
 };
+
+template<
+  typename Container,
+  typename Comparator = std::less< typename Container::value_type >
+>
+class sorted_vector: public sorted_vector_base<Container, Comparator>
+{
+  typedef sorted_vector_base<Container, Comparator> super;
+public:
+  typedef typename super::value_type value_type;
+  typedef typename super::iterator iterator;
+  typedef typename super::const_iterator const_iterator;
+  typedef typename super::size_type size_type;
+  typedef typename super::container container;
+  typedef typename super::comparator comparator;
+
+  sorted_vector(container cnt = container(), comparator cmp = comparator() ): super(cnt, cmp) {};
+  
+  std::pair<iterator, bool> insert ( const value_type& x )
+  {
+    typename container::iterator itr = std::lower_bound( super::_container.begin(), super::_container.end(), x, super::_comparator );
+    return std::make_pair( super::_container.insert(itr, x), true );
+  }
+
+  void insert( size_type n, const value_type& x )
+  {
+    typename container::iterator itr = std::lower_bound( super::_container.begin(), super::_container.end(), x, super::_comparator );
+    super::_container.insert(itr, n, x);
+  }
+
+  template <class InputIterator>
+  void insert ( InputIterator first, InputIterator last )
+  {
+    std::for_each(first, last, [this](const typename InputIterator::value_type& value ) { this->insert(value);} );
+  }
+
+  void update(iterator position, const value_type& value )
+  {
+    if ( !super::_comparator(*position, value) && !super::_comparator(value, *position) )
+      *position = value;
+    else
+    {
+      this->erase(position);
+      this->insert(value);
+    }
+  }
+};
+
+template<
+  typename Container,
+  typename Comparator = std::less< typename Container::value_type >
+>
+class unique_sorted_vector: public sorted_vector_base<Container, Comparator>
+{
+  typedef unique_sorted_vector<Container, Comparator> super;
+public:
+  typedef typename super::value_type value_type;
+  typedef typename super::iterator iterator;
+  typedef typename super::const_iterator const_iterator;
+  typedef typename super::size_type size_type;
+  typedef typename super::container container;
+  typedef typename super::comparator comparator;
+
+  unique_sorted_vector(container cnt = container(), comparator cmp = comparator() ): super(cnt, cmp) {};
+  
+  std::pair<iterator, bool> insert ( const value_type& x )
+  {
+    typename container::iterator itr = std::lower_bound( super::_container.begin(), super::_container.end(), x, super::_comparator );
+    if (itr!=super::_container.end() && !super::_comparator(*itr, x) && !super::_comparator(x, *itr))
+      return std::make_pair(itr, false);
+    return std::make_pair( super::_container.insert(itr, x), true );
+  }
+
+  void insert( size_type n, const value_type& x )
+  {
+    this->insert( x );
+  }
+
+  template <class InputIterator>
+  void insert ( InputIterator first, InputIterator last )
+  {
+    std::for_each(first, last, [this](const typename InputIterator::value_type& value ) { this->insert(value);} );
+  }
+
+  void update(iterator position, const value_type& value )
+  {
+    if ( !super::_comparator(*position, value) && !super::_comparator(value, *position) )
+      *position = value;
+    else
+    {
+      this->erase(position);
+      this->insert(value);
+    }
+  }
+};
+
+/*
+std::pair<iterator, bool> insert ( const value_type& x )
+  {
+    typename container::iterator itr = std::lower_bound(_container.begin(), _container.end(), _comparator );
+    return std::make_pair( _container.insert(itr, x), true );
+  }*/
+//typedef typename sorted_vector< std::vector<int>, std::less<int>, true>::size_type tmp_size_type;
+/*
+template<typename Container,typename Comparator>
+std::pair< typename sorted_vector<Container, Comparator, true>::iterator, bool>
+sorted_vector<Container, Comparator, true>
+::insert( const typename sorted_vector<Container, Comparator, true>::value_type& x )
+{
+  typename container::iterator itr = std::lower_bound(_container.begin(), _container.end(), _comparator );
+  if (itr!=_container.end() && !_comparator(*itr, x) && !_comparator(x, *itr))
+    return std::make_pair(itr, false);
+  return std::make_pair( _container.insert(itr, x), true );
+}*/
+
+/*
+template<typename Container, typename Comparator>
+void sorted_vector<Container, Comparator, true>::insert( typename Container::size_type n, const typename Container::value_type& x )
+{
+  this->insert(x);
+}*/
+
+/*
+template<typename Container, typename Comparator, bool Flag>
+void sorted_vector<Container, Comparator, Flag>::insert( typename Container::size_type n, const typename Container::value_type& x )
+{
+  typename container::iterator itr = std::lower_bound(_container.begin(), _container.end(), _comparator );
+  return _container.insert(itr, n, x);
+}
+
+template<typename Container, typename Comparator>
+typename Comparator::size_type sorted_vector<Container, Comparator, false>::size( ) const
+{
+  return 0;;
+}
+*/
+
+
+
 
 #endif
