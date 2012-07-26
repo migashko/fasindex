@@ -100,8 +100,8 @@ public:
     return const_iterator( size(), *this);
   }
 
-  reference at(size_type position) { return this->_at(position); }
-  const_reference at(size_type position) const { return this->_at(position); }
+  reference at(size_type position)  /* __attribute__ ((noinline)) */ { return this->_at(position); }
+  const_reference at(size_type position) const   /*__attribute__ ((noinline)) */ { return this->_at(position); }
 
   reference operator[](size_type position) { return this->at(position); }
   const_reference operator[](size_type position) const { return this->at(position); }
@@ -121,10 +121,15 @@ public:
     _size = 0;
   }
 
+  const value_type& back() const
+  {
+    return _vector_of_index.back().back();
+  }
+
 
   void push_back(const_reference x)
   {
-    this->check_next_index();
+    //this->check_next_index();
     typename vector_of_index::iterator itr = _last_vector_of_index();
 
     if ( itr!=_vector_of_index.end() )
@@ -133,15 +138,15 @@ public:
       if ( itr->filled() )
       {
 
-        this->check_next_index();
+        // this->check_next_index();
 
         index_wrapper iw = _create_vector_of_index();
 
-        this->check_next_index();
+        // this->check_next_index();
         iw.next_index( _vector_of_index.back().next_index() );
 
         _vector_of_index.push_back( iw );
-        this->check_next_index();
+        // this->check_next_index();
 
       }
       itr = _vector_of_index.end();
@@ -162,12 +167,12 @@ public:
     }
 
 
-    this->check_next_index();
+    //this->check_next_index();
     itr->push_back(x);
 
     ++_size;
-    this->check_next_index();
-    this->debug_check_size();
+    //this->check_next_index();
+    //this->debug_check_size();
   }
 
   iterator insert(iterator itr, const value_type& vt)

@@ -126,9 +126,7 @@ public:
       _main_array->rend(),
       [this, &current_next_index, &current_size](const index_type& ind)
       {
-
         _array = ind;
-        
         _array->next_index = current_next_index;
         current_next_index -= _array->size();
         current_size+= _array->size();
@@ -149,8 +147,20 @@ public:
 
   reference front ( ){ throw; /*return _data[0];*/ }
   const_reference front ( ) const { throw;/*return _data[0];*/ }
-  reference back ( ){ throw;/*return _data[_size-1];*/ }
-  const_reference back ( ) const{ throw;/*return _data[_size-1];*/ }
+  reference back ( )
+  {
+    _array = _main_array->back();
+    return _array->back();
+    //throw;/*return _data[_size-1];*/
+    
+  }
+  const_reference back ( ) const
+  {
+    _array = _main_array->back();
+    return _array->back();
+    //throw;/*return _data[_size-1];*/
+    
+  }
 
   bool filled () const { return _main_array->filled();}
 
@@ -330,8 +340,9 @@ public:
   /** @return false - если нет места для вставки */
   bool push_back ( const value_type& x )
   {
-    update_next_index();
+    /*update_next_index();
     check_next_index();
+    */
     //size_t pred_last_index = 0;
     bool flag = false;
     if ( _main_array->empty() )
@@ -353,7 +364,6 @@ public:
       _allocator.construct(_array, array_type() );
       _array->next_index =  this->next_index();
       _main_array->push_back(_array);
-
     }
 
     _array = *(_main_array->last());
@@ -361,9 +371,11 @@ public:
     ++_array->next_index;
     this->inc_next_index();
     ++_main_array->common_size;
+    /*
     check_next_index();
     debug_check_size();
     update_next_index();
+    */
     return true;
   }
 
@@ -473,7 +485,7 @@ public:
 
     ++_main_array->common_size;
     this->inc_next_index();
-    update_next_index();
+    //update_next_index();
     //std::cout << "} insert " << n << std::endl;
     return true;
   }
@@ -529,8 +541,11 @@ public:
       --_array->next_index;
     }
     --_main_array->common_size;
-    this->dec_next_index();
-    update_next_index();
+    //this->dec_next_index();
+    // Вручную 
+    --_main_array->next_index;
+    //_main_array->flag = 0;
+    // update_next_index();
     return 1;
   }
 

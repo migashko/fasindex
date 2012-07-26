@@ -36,14 +36,14 @@ public:
     return this->at(n);
   }
 
-  const_reference at ( size_type n ) const
+  const_reference at ( size_type n ) const  // __attribute__ ((noinline))
   {
     if ( n < _size)
       return _data[n];
     throw std::out_of_range("array::at");
   }
 
-  reference at ( size_type n )
+  reference at ( size_type n )  // __attribute__ ((noinline))
   {
     if ( n < _size )
       return _data[n];

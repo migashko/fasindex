@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 
+
 template<
   typename Container,
   typename Comparator = std::less< typename Container::value_type >

@@ -52,7 +52,7 @@ struct f_src_by_time
   }
 };
 
-template<typename Container, typename Compare>
+template<typename T, typename Container, typename Compare>
 struct comparator:
   Compare
 {
@@ -61,7 +61,10 @@ struct comparator:
   template<typename Index>
   bool operator()(const Index& f, const Index& s) const
   {
-    return Compare::operator()( _container->at(f), _container->at(s) );
+    return Compare::operator()(
+      *(reinterpret_cast<const T*>( _container->addr() + f) ),
+      *(reinterpret_cast<const T*>( _container->addr() + s) )
+    );
   }
 };
 
@@ -72,8 +75,8 @@ typedef vector<data, helper::value_allocator, helper::index_allocator> vector_ty
 
 class hitlist
 {
-  typedef allocator_helper<hit>::mmap<1024*16, 1024*16> hit_helper;
-  typedef allocator_helper<offset_type>::mmap<1024*16, 1024*16> index_helper;
+  typedef allocator_helper<hit>::mmap<1024*4, 1024*16> hit_helper;
+  typedef allocator_helper<offset_type>::mmap<1024*4, 1024*16> index_helper;
 
   /// /////////////////////////////////////////
   typedef hit_helper::buffer_type hit_index_buffer;
@@ -93,7 +96,7 @@ class hitlist
   typedef index_helper::index_allocator dst_by_time_index_allocator;
   
   typedef vector<offset_type, dst_by_time_value_allocator, dst_by_time_index_allocator> dst_by_time_vector;
-  typedef sorted_vector<dst_by_time_vector, comparator<hit_vector, f_dst_by_time> > dst_by_time_index;
+  typedef sorted_vector<dst_by_time_vector, comparator<hit, hit_value_buffer, f_dst_by_time> > dst_by_time_index;
   
   
 public:
@@ -123,14 +126,14 @@ public:
   {
     std::string file;
     file = path + "/hit_index.bin";
-    _hit_index_buffer.open(file.c_str(), 1024*1024*1024);
+    _hit_index_buffer.open(file.c_str(), 1024*1024*10l);
     file = path + "/hit_value.bin";
-    _hit_value_buffer.open(file.c_str(), 1024*1024*1024);
+    _hit_value_buffer.open(file.c_str(), 1024*1024*10l);
 
     file = path + "/dst_by_time_index.bin";
-    _dst_by_time_index_buffer.open(file.c_str(), 1024*1024*1024);
+    _dst_by_time_index_buffer.open(file.c_str(), 1024*1024*10l);
     file = path + "/dst_by_time_value.bin";
-    _dst_by_time_value_buffer.open(file.c_str(), 1024*1024*1024);
+    _dst_by_time_value_buffer.open(file.c_str(), 1024*1024*10l);
 
     _hits = new hit_vector( hit_value_allocator(_hit_value_allocate_manager), hit_index_allocator(_hit_index_allocate_manager) );
     _hits->restore( _hit_index_allocate_manager.begin(), _hit_index_allocate_manager.end() );
@@ -140,7 +143,7 @@ public:
         dst_by_time_value_allocator(_dst_by_time_value_allocate_manager),
         dst_by_time_index_allocator(_dst_by_time_index_allocate_manager)
       ),
-      comparator<hit_vector, f_dst_by_time>(*_hits)
+      comparator<hit, hit_value_buffer, f_dst_by_time>(_hit_value_buffer)
     );
     
     _dst_by_time->get_container().restore( _dst_by_time_index_allocate_manager.begin(), _dst_by_time_index_allocate_manager.end() );
@@ -150,7 +153,9 @@ public:
   void insert(const hit& h)
   {
     _hits->push_back( h );
-    _dst_by_time->insert( _hits->size() - 1 );
+    offset_type offset = reinterpret_cast<const char*>( &(_hits->back()) ) -  _hit_value_buffer.addr();
+    //_hit_value_allocate_manager.offset( &(_hits->back()) );
+    _dst_by_time->insert( offset );
   }
 
 private:
@@ -168,6 +173,7 @@ private:
 };
 
 #define MAX_HITS ( 700 * 3600 * 24 * 30 )
+//#define MAX_HITS ( 1000000 )
 int main(int argc, char* argv[])
 {
   hitlist h;
@@ -195,7 +201,7 @@ int main(int argc, char* argv[])
       // 700 persec
       for (int j = 0 ; j < 700; ++j )
       {
-        if ( total >  MAX_HITS ) break;
+        if ( total >  MAX_HITS ) exit(0);
         
         hit hi;
         hi.src = rand() % 100000;
