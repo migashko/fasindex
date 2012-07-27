@@ -262,6 +262,8 @@ public:
     );
   }
 
+  size_t main_index_size() const { return _vector_of_index.size(); }
+
   void debug_check_size()
   {
     size_t size = 0;

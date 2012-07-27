@@ -123,6 +123,11 @@ public:
   {
     return _fd != -1;
   }
+
+  void sync( bool async = false )
+  {
+    ::msync(_addr, _size, async ? MS_ASYNC : MS_SYNC);
+  }
   
 private:
   int _fd;

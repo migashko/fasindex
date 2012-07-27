@@ -75,8 +75,12 @@ typedef vector<data, helper::value_allocator, helper::index_allocator> vector_ty
 
 class hitlist
 {
-  typedef allocator_helper<hit>::mmap<1024*4, 1024*16> hit_helper;
-  typedef allocator_helper<offset_type>::mmap<1024*4, 1024*16> index_helper;
+  // OK
+  // typedef allocator_helper<hit>::mmap<1024*32, 1024*32> hit_helper;
+  // typedef allocator_helper<offset_type>::mmap<1024*32, 1024*32> index_helper;
+
+  typedef allocator_helper<hit>::mmap<1024*16, 1024*256> hit_helper;
+  typedef allocator_helper<offset_type>::mmap<1024*16, 1024*256> index_helper;
 
   /// /////////////////////////////////////////
   typedef hit_helper::buffer_type hit_index_buffer;
@@ -122,18 +126,27 @@ public:
 
   size_t size() const { return _hits->size();}
 
+  
+  void sync(bool async = false)
+  {
+    _hit_index_buffer.sync(async);
+    _hit_value_buffer.sync(async);
+    _dst_by_time_index_buffer.sync(async);
+    _dst_by_time_value_buffer.sync(async);
+  }
+
   void restore(const std::string& path)
   {
     std::string file;
     file = path + "/hit_index.bin";
-    _hit_index_buffer.open(file.c_str(), 1024*1024*10l);
+    _hit_index_buffer.open(file.c_str(), 1024*1024*1024l);
     file = path + "/hit_value.bin";
-    _hit_value_buffer.open(file.c_str(), 1024*1024*10l);
+    _hit_value_buffer.open(file.c_str(), 1024*1024*1024l);
 
     file = path + "/dst_by_time_index.bin";
-    _dst_by_time_index_buffer.open(file.c_str(), 1024*1024*10l);
+    _dst_by_time_index_buffer.open(file.c_str(), 1024*1024*1024l);
     file = path + "/dst_by_time_value.bin";
-    _dst_by_time_value_buffer.open(file.c_str(), 1024*1024*10l);
+    _dst_by_time_value_buffer.open(file.c_str(), 1024*1024*1024l);
 
     _hits = new hit_vector( hit_value_allocator(_hit_value_allocate_manager), hit_index_allocator(_hit_index_allocate_manager) );
     _hits->restore( _hit_index_allocate_manager.begin(), _hit_index_allocate_manager.end() );
@@ -156,6 +169,17 @@ public:
     offset_type offset = reinterpret_cast<const char*>( &(_hits->back()) ) -  _hit_value_buffer.addr();
     //_hit_value_allocate_manager.offset( &(_hits->back()) );
     _dst_by_time->insert( offset );
+    this->sync(true);
+  }
+
+  size_t hits_main_index_size()
+  {
+    return _hits->main_index_size();
+  }
+
+  size_t dst_by_time_main_index_size()
+  {
+    return _dst_by_time->get_container().main_index_size();
   }
 
 private:
@@ -176,10 +200,10 @@ private:
 //#define MAX_HITS ( 1000000 )
 int main(int argc, char* argv[])
 {
-  hitlist h;
-  h.restore("./hitlist");
+  hitlist* h = new hitlist;
+  h->restore("./hitlist");
 
-  if ( h.size() == 0 )
+  if ( h->size() == 0 )
   {
     fas::nanospan start = fas::nanotime();
     fas::nanospan current_start = fas::nanotime();
@@ -194,7 +218,11 @@ int main(int argc, char* argv[])
         time_t day = ( i - start_time )/3600/24;
         time_t hour = ( i - start_time )/3600 - ( ( i - start_time )/3600/24 ) * 24;
       
-        std::cout << "day: " << day << ":" << hour << " total: " << total << " time "<< i - start_time << ", " << fas::nanotime() - start << ", rate: " << fas::rate(fas::nanotime() - current_start)*int(current) << std::endl;
+        //std::cout << "day: " << day << ":" << hour << " total: " << total << " time "<< i - start_time << ", " << fas::nanotime() - start << ", rate: " << fas::rate(fas::nanotime() - current_start)*int(current) << std::endl;
+        std::cout << total << "; " << fas::nanotime() - current_start << "; " << fas::rate(fas::nanotime() - current_start)*int(current)
+                  << "; " << h->hits_main_index_size()
+                  << "; " << h->dst_by_time_main_index_size()
+                  << std::endl;
         current_start = fas::nanotime();
         current = 0;
       }
@@ -208,7 +236,7 @@ int main(int argc, char* argv[])
         hi.dst = rand() % 100000;
         hi.hittime = i;
         hi.type_id = 0;
-        h.insert(hi);
+        h->insert(hi);
         ++total;
         ++current;
       }

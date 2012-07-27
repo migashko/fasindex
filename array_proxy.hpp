@@ -430,7 +430,7 @@ public:
   bool insert( size_type n, const value_type& x )
   {
     //std::cout << "insert { " << n << std::endl;
-    update_next_index();
+    //update_next_index();
 
     if ( n == this->next_index() )
       return push_back(x);
@@ -650,9 +650,11 @@ public:
     proxy.update_size();
     proxy.next_index( this->next_index() );
     this->dec_next_index( proxy.size() );
-    
+
+    /*!!!
     update_next_index(true);
     proxy.update_next_index(true);
+    */
 
 
     /*
