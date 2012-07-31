@@ -79,8 +79,8 @@ class hitlist
   // typedef allocator_helper<hit>::mmap<1024*32, 1024*32> hit_helper;
   // typedef allocator_helper<offset_type>::mmap<1024*32, 1024*32> index_helper;
 
-  typedef allocator_helper<hit>::mmap<1024*16, 1024*256> hit_helper;
-  typedef allocator_helper<offset_type>::mmap<1024*16, 1024*256> index_helper;
+  typedef allocator_helper<hit>::mmap<1024*64, 1024*64> hit_helper;
+  typedef allocator_helper<offset_type>::mmap<1024*64, 1024*64> index_helper;
 
   /// /////////////////////////////////////////
   typedef hit_helper::buffer_type hit_index_buffer;
@@ -197,6 +197,12 @@ private:
 };
 
 #define MAX_HITS ( 700 * 3600 * 24 * 30 )
+
+#define MAX_THREAD 5
+
+
+
+
 //#define MAX_HITS ( 1000000 )
 int main(int argc, char* argv[])
 {
