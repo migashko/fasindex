@@ -79,9 +79,13 @@ class hitlist
   // typedef allocator_helper<hit>::mmap<1024*32, 1024*32> hit_helper;
   // typedef allocator_helper<offset_type>::mmap<1024*32, 1024*32> index_helper;
 
-  typedef allocator_helper<hit>::mmap<1024*64, 1024*64> hit_helper;
-  typedef allocator_helper<offset_type>::mmap<1024*64, 1024*64> index_helper;
+  //typedef allocator_helper<hit>::mmap<1024*64, 1024*64> hit_helper;
+  //typedef allocator_helper<offset_type>::mmap<1024*64, 1024*64> index_helper;
 
+  typedef allocator_helper<hit>::mmap<256, 256> hit_helper;
+  typedef allocator_helper<offset_type>::mmap<256, 256> index_helper;
+
+  
   /// /////////////////////////////////////////
   typedef hit_helper::buffer_type hit_index_buffer;
   typedef hit_helper::buffer_type hit_value_buffer;
@@ -104,6 +108,7 @@ class hitlist
   
   
 public:
+  int _insert_count;
   hitlist()
     : _hit_index_buffer()
     , _hit_value_buffer()
@@ -121,7 +126,7 @@ public:
       )
       */
     {
-      
+      _insert_count = 0;
     }
 
   size_t size() const { return _hits->size();}
@@ -139,14 +144,14 @@ public:
   {
     std::string file;
     file = path + "/hit_index.bin";
-    _hit_index_buffer.open(file.c_str(), 1024*1024*1024l);
+    _hit_index_buffer.open(file.c_str(), 1024);
     file = path + "/hit_value.bin";
-    _hit_value_buffer.open(file.c_str(), 1024*1024*1024l);
+    _hit_value_buffer.open(file.c_str(), 1024);
 
     file = path + "/dst_by_time_index.bin";
-    _dst_by_time_index_buffer.open(file.c_str(), 1024*1024*1024l);
+    _dst_by_time_index_buffer.open(file.c_str(), 1024);
     file = path + "/dst_by_time_value.bin";
-    _dst_by_time_value_buffer.open(file.c_str(), 1024*1024*1024l);
+    _dst_by_time_value_buffer.open(file.c_str(), 1024);
 
     _hits = new hit_vector( hit_value_allocator(_hit_value_allocate_manager), hit_index_allocator(_hit_index_allocate_manager) );
     _hits->restore( _hit_index_allocate_manager.begin(), _hit_index_allocate_manager.end() );
@@ -169,7 +174,11 @@ public:
     offset_type offset = reinterpret_cast<const char*>( &(_hits->back()) ) -  _hit_value_buffer.addr();
     //_hit_value_allocate_manager.offset( &(_hits->back()) );
     _dst_by_time->insert( offset );
-    this->sync(true);
+    if ( ++_insert_count == 1000 )
+    {
+      this->sync(true);
+      _insert_count ==0;
+    }
   }
 
   size_t hits_main_index_size()
