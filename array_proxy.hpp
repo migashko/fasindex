@@ -20,6 +20,7 @@ public:
 
   typedef typename allocator::pointer array_pointer;
   typedef typename allocator::value_type array_type;
+  enum { dimension = array_type::dimension };
 
   typedef typename array_type::value_type value_type;
   typedef typename array_type::reference reference;
@@ -41,6 +42,7 @@ public:
     : _main_array(main_ptr)
     //, _array(ap)
     , _allocator(a)
+    , _temporary_next_index(0)
   {
     _array = _allocator.allocate(1);
     _allocator.deallocate( _array, 1);
@@ -51,6 +53,7 @@ public:
     ,*/ _main_array(aoa._main_array)
     , _array(aoa._array)
     , _allocator(aoa._allocator)
+    , _temporary_next_index(aoa._temporary_next_index)
   {
   }
 
@@ -60,6 +63,7 @@ public:
     _main_array = aoa._main_array;
     _array = aoa._array;
     _allocator = aoa._allocator;
+    _temporary_next_index = aoa._temporary_next_index;
   }
 
 
@@ -68,27 +72,36 @@ public:
   void next_index(size_t new_last_index) { _main_array->next_index( new_last_index ); }
   */
 
+  mutable size_t _temporary_next_index;
+  mutable size_t _temporary_array_next_index[dimension];
+  
   void next_index(size_t n)
   {
     if ( !_main_array->flag )
       _main_array->flag = _main_array->next_index != n;
     _main_array->next_index = n;
+    _temporary_next_index = n;
   }
 
   void inc_next_index(size_t n = 1)
   {
     _main_array->flag = 1;
     _main_array->next_index += n;
+    _temporary_next_index  += n;
   }
 
   void dec_next_index(size_t n = 1)
   {
     _main_array->flag = 1;
     _main_array->next_index -= n;
+    _temporary_next_index  -= n;
   }
 
   size_t next_index() const
   {
+    if ( _temporary_next_index == 0 )
+      _temporary_next_index = _main_array->next_index;
+    return _temporary_next_index;
     return _main_array->next_index;
   }
 
@@ -116,25 +129,21 @@ public:
       // TODO: Сброисть или исключение
       return true;
     }
-    size_t current_size = 0;
+    // size_t current_size = 0;
+    size_type current_next_index = this->next_index(); 
     
-    //_array = *(_main_array->last());
-    size_type current_next_index = this->next_index(); // _array->next_index;
-    //_main_array->next_index = current_next_index;
     std::for_each(
       _main_array->rbegin(),
       _main_array->rend(),
-      [this, &current_next_index, &current_size](const index_type& ind)
+      [this, &current_next_index/*, &current_size*/](const index_type& ind)
       {
         _array = ind;
         _array->next_index = current_next_index;
         current_next_index -= _array->size();
-        current_size+= _array->size();
+        // current_size+= _array->size();
       }
     );
     _main_array->flag =  false;
-    //_main_array->common_size = current_size;
-    
     return true;
   }
 
@@ -544,6 +553,7 @@ public:
     //this->dec_next_index();
     // Вручную 
     --_main_array->next_index;
+    --_temporary_next_index;
     //_main_array->flag = 0;
     // update_next_index();
     return 1;

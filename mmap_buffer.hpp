@@ -48,7 +48,8 @@ public:
   
   bool open(const char* path, size_t size = 0)
   {
-    _fd = ::open(path, O_RDWR | O_CREAT, (mode_t)0600);
+    
+    _fd = ::open(path, O_RDWR | O_CREAT, /*(mode_t)0600*/ S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH );
 
     if ( _fd == -1)
       return false;
@@ -72,8 +73,23 @@ public:
       }
       ::write(_fd, "", 1);
     }
+
+    /*
+    MAP_HUGETLB (since Linux 2.6.32)
+    Allocate the mapping using "huge pages."  See the kernel source file
+    Documentation/vm/hugetlbpage.txt for further information.
+
+     MAP_NORESERVE
+     Do not reserve swap space for this mapping.  When swap space is
+     reserved, one has the guarantee that it is possible to modify the
+    mapping.  When swap space is not reserved one might get SIGSEGV upon a
+    write if no physical memory is available.  See also the discussion of
+              the file /proc/sys/vm/overcommit_memory in proc(5).  In kernels before
+              2.6, this flag only had effect for private writable mappings.
     
-    _addr = (char*)::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
+    */
+    
+    _addr = (char*)::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED/*MAP_PRIVATE*/ /*| MAP_HUGETLB */| MAP_NORESERVE, _fd, 0);
     
     if (_addr == MAP_FAILED)
     {

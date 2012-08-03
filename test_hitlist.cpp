@@ -153,9 +153,11 @@ public:
     file = path + "/dst_by_time_value.bin";
     _dst_by_time_value_buffer.open(file.c_str(), 1024);
 
+    std::cout << "restore hits..." << std::endl;
     _hits = new hit_vector( hit_value_allocator(_hit_value_allocate_manager), hit_index_allocator(_hit_index_allocate_manager) );
     _hits->restore( _hit_index_allocate_manager.begin(), _hit_index_allocate_manager.end() );
 
+    std::cout << "restore dst_by_time..." << std::endl;
     _dst_by_time = new dst_by_time_index(
       dst_by_time_vector(
         dst_by_time_value_allocator(_dst_by_time_value_allocate_manager),
@@ -216,9 +218,10 @@ private:
 int main(int argc, char* argv[])
 {
   hitlist* h = new hitlist;
+  std::cout << "restore..." << std::endl;
   h->restore("./hitlist");
-
-  if ( h->size() == 0 )
+  std::cout << "restore done!" << std::endl;
+  //if ( h->size() == 0 )
   {
     fas::nanospan start = fas::nanotime();
     fas::nanospan current_start = fas::nanotime();
