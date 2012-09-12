@@ -2,7 +2,7 @@
 #define VECTOR_HPP
 
 #include <vector>
-#include "managed_allocator.hpp"
+#include <pmi/allocator.hpp>
 #include <pmi/array.hpp>
 #include "array_proxy.hpp"
 #include "offset_iterator.hpp"
@@ -24,8 +24,8 @@ struct allocator_helper
     typedef chain_memory<index_array_type, buffer_type> index_allocate_manager;
     typedef chain_memory<value_array_type, buffer_type> value_allocate_manager;
 
-    typedef managed_allocator<value_array_type, value_allocate_manager> value_allocator;
-    typedef managed_allocator<index_array_type, index_allocate_manager> index_allocator;
+    typedef allocator<value_array_type, value_allocate_manager> value_allocator;
+    typedef allocator<index_array_type, index_allocate_manager> index_allocator;
   };
 };
 

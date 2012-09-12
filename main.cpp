@@ -18,8 +18,8 @@
 
 #include <pmi/buffer/mmap_buffer.hpp>
 //#include "offset_pointer.hpp"
-#include <pmi/memory/fixed_size_blocks_allocation.hpp>
-#include "managed_allocator.hpp"
+#include <pmi/memory/chain_memory.hpp>
+#include <pmi/allocator.hpp>
 #include <pmi/array.hpp>
 #include "offset_iterator.hpp"
 #include "vector.hpp"
@@ -60,8 +60,8 @@ void test_array_of_array()
   typedef chain_memory<data_array, mmap_buffer> data_buffer_manager;
   typedef chain_memory<index_array, mmap_buffer> index_buffer_manager;
 
-  typedef managed_allocator< data_array, data_buffer_manager > data_allocator;
-  typedef managed_allocator< index_array, index_buffer_manager > index_allocator;
+  typedef allocator< data_array, data_buffer_manager > data_allocator;
+  typedef allocator< index_array, index_buffer_manager > index_allocator;
 
   //template<typename T, int N, typename P, typename A>
   typedef array_proxy< /*index_type, 256*//*index_array,*/ index_allocator::pointer, data_allocator> arr_of_arr;
@@ -156,8 +156,8 @@ void test_vector_list()
   typedef chain_memory<data_array, mmap_buffer> data_buffer_manager;
   typedef chain_memory<index_array, mmap_buffer> index_buffer_manager;
 
-  typedef managed_allocator< data_array, data_buffer_manager > data_allocator;
-  typedef managed_allocator< index_array, index_buffer_manager > index_allocator;
+  typedef allocator< data_array, data_buffer_manager > data_allocator;
+  typedef allocator< index_array, index_buffer_manager > index_allocator;
 
   typedef vector<data, data_allocator, index_allocator> vector_list_type;
 

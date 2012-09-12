@@ -5,6 +5,18 @@
 #include <cstddef>
 #include <stdexcept>
 
+template<typename T>
+struct remove_const
+{
+  typedef T type;
+};
+
+template<typename T>
+struct remove_const<const T>
+{
+  typedef T type;
+};
+
 /// TODO: проверки за выход диапазона
 template<typename T, size_t N>
 class array
@@ -12,7 +24,7 @@ class array
 public:
   enum { dimension = N};
   typedef T value_type;
-  typedef T data_type[N];
+  typedef typename remove_const<T>::type data_type[N];
   typedef size_t size_type;
   typedef T& reference;
   typedef const T& const_reference;
