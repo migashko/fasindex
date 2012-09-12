@@ -17,12 +17,12 @@ int main(int argc, char* argv[])
   *(s.begin()) = 10;
   */
 
-  /*
+
   sorted_array<int, 1024> sa;
   sa.erase(sa.begin());
-  */
 
-  
-  
+
+
+
   return 0;
 }
