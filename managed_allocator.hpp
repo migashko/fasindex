@@ -2,10 +2,10 @@
 #define MANAGED_ALLOCATOR_HPP
 
 #include <limits>
-#include "mmap_buffer.hpp"
-#include "fixed_size_blocks_allocation.hpp"
+#include <pmi/buffer/mmap_buffer.hpp>
+#include <pmi/memory/fixed_size_blocks_allocation.hpp>
 
-template<typename T, typename AllocateManager = fixed_size_blocks_allocation<T, mmap_buffer> >
+template<typename T, typename AllocateManager = chain_memory<T, mmap_buffer> >
 struct managed_allocator
 {
   typedef managed_allocator<T, AllocateManager> self;
@@ -37,7 +37,7 @@ struct managed_allocator
   pointer allocate (size_type num, void *  hint = 0)
   {
     //if (num!=1) throw;
-    return _mmm->allocate();
+    return _mmm->allocate(num, hint);
   }
 
   void construct (pointer p, const_reference value)
@@ -53,7 +53,7 @@ struct managed_allocator
   void deallocate (pointer p, size_type num)
   {
     //if (num!=1) throw;
-    _mmm->deallocate(p);
+    _mmm->deallocate(p, num);
   }
     
   

@@ -2,7 +2,7 @@
 #define VALUE_ARRAY_HPP
 
 #include "next_index_holder.hpp"
-#include "array.hpp"
+#include <pmi/array.hpp>
 
 template<typename T, int N>
 struct value_array

@@ -1,6 +1,8 @@
 #ifndef CHAIN_HPP
 #define CHAIN_HPP
+
 #include <iostream>
+
 template<typename T, template<typename> class Chunk >
 struct chain
 {

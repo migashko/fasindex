@@ -6,9 +6,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include "buffer_base.hpp"
 #include <iostream>
+
+#include <pmi/buffer/buffer_base.hpp>
+
 
 
 class mmap_buffer

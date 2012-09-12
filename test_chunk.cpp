@@ -1,4 +1,4 @@
-#include "chunk.hpp"
+#include <pmi/memory/chunk.hpp>
 #include <stdexcept>
 #include <iostream>
 int main(int argc, char* argv[])
@@ -25,8 +25,6 @@ int main(int argc, char* argv[])
   std::cout << std::hex << chnk.bits << std::endl;
   if (chnk.bits!=0xAAAAAAAAAAAAAAAA)
     throw std::exception();
-
-
 
   return 0;
 }

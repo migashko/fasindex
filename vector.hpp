@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "managed_allocator.hpp"
-#include "array.hpp"
+#include <pmi/array.hpp>
 #include "array_proxy.hpp"
 #include "offset_iterator.hpp"
 #include "next_index_holder.hpp"
@@ -21,8 +21,8 @@ struct allocator_helper
     typedef value_array<T,N1> value_array_type;
     typedef index_array<size_t, N2> index_array_type;
 
-    typedef fixed_size_blocks_allocation<index_array_type, buffer_type> index_allocate_manager;
-    typedef fixed_size_blocks_allocation<value_array_type, buffer_type> value_allocate_manager;
+    typedef chain_memory<index_array_type, buffer_type> index_allocate_manager;
+    typedef chain_memory<value_array_type, buffer_type> value_allocate_manager;
 
     typedef managed_allocator<value_array_type, value_allocate_manager> value_allocator;
     typedef managed_allocator<index_array_type, index_allocate_manager> index_allocator;

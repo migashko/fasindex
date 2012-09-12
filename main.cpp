@@ -16,11 +16,11 @@
 #include <fas/range.hpp>
 #include <fas/xtime.hpp>
 
-#include "mmap_buffer.hpp"
+#include <pmi/buffer/mmap_buffer.hpp>
 //#include "offset_pointer.hpp"
-#include "fixed_size_blocks_allocation.hpp"
+#include <pmi/memory/fixed_size_blocks_allocation.hpp>
 #include "managed_allocator.hpp"
-#include "array.hpp"
+#include <pmi/array.hpp>
 #include "offset_iterator.hpp"
 #include "vector.hpp"
 
@@ -57,8 +57,8 @@ void test_array_of_array()
   typedef value_array<data,  128> data_array;
   typedef index_array<size_t, 256> index_array;
 
-  typedef fixed_size_blocks_allocation<data_array, mmap_buffer> data_buffer_manager;
-  typedef fixed_size_blocks_allocation<index_array, mmap_buffer> index_buffer_manager;
+  typedef chain_memory<data_array, mmap_buffer> data_buffer_manager;
+  typedef chain_memory<index_array, mmap_buffer> index_buffer_manager;
 
   typedef managed_allocator< data_array, data_buffer_manager > data_allocator;
   typedef managed_allocator< index_array, index_buffer_manager > index_allocator;
@@ -153,8 +153,8 @@ void test_vector_list()
   typedef value_array<data,  128> data_array;
   typedef index_array<size_t, 256> index_array;
 
-  typedef fixed_size_blocks_allocation<data_array, mmap_buffer> data_buffer_manager;
-  typedef fixed_size_blocks_allocation<index_array, mmap_buffer> index_buffer_manager;
+  typedef chain_memory<data_array, mmap_buffer> data_buffer_manager;
+  typedef chain_memory<index_array, mmap_buffer> index_buffer_manager;
 
   typedef managed_allocator< data_array, data_buffer_manager > data_allocator;
   typedef managed_allocator< index_array, index_buffer_manager > index_allocator;

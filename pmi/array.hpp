@@ -49,43 +49,116 @@ public:
       return _data[n];
     throw std::out_of_range("array::at");
   }
-  reference front ( ){ return _data[0]; }
-  const_reference front ( ) const{ return _data[0]; }
-  reference back ( ){ return _data[_size-1]; }
-  const_reference back ( ) const{ return _data[_size-1]; }
+  
+  reference front ( )
+  {
+    return _data[0];
+  }
+  
+  const_reference front ( ) const
+  {
+    return _data[0];
+  }
+  
+  reference back ( )
+  {
+    return _data[_size-1];
+  }
+  
+  const_reference back ( ) const
+  {
+    return _data[_size-1];
+  }
 
-  size_type size() const { return _size;}
-  size_type max_size() const { return N;}
-  size_type capacity() const { return N;}
-  bool empty () const {return _size==0;}
-  bool filled () const { return _size == N;}
+  size_type size() const
+  {
+    return _size;
+  }
+  
+  size_type max_size() const
+  {
+    return N;
+  }
+  
+  size_type capacity() const
+  {
+    return N;
+  }
+  
+  bool empty () const
+  {
+    return _size==0;
+  }
+  
+  bool filled () const
+  {
+    return _size == N;
+  }
+  
   void resize ( size_type sz, T value = value_type() )
   {
     if (sz > _size)
       std::fill_n( end(), sz - _size, value );
     _size = sz;
   }
+  
   void reserve ( size_type n ) {}
 
-  reverse_iterator rbegin() { return reverse_iterator(end()/*+_size-1*/); }
-  const_reverse_iterator rbegin() const { return const_reverse_iterator(/*begin()+_size-1*/end()); }
+  reverse_iterator rbegin()
+  {
+    return reverse_iterator(end());
+  }
+  
+  const_reverse_iterator rbegin() const
+  {
+    return const_reverse_iterator( end() );
+  }
 
-  reverse_iterator rend() { return reverse_iterator(/*begin()-1*/begin()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(/*begin()-1*/begin()); }
+  reverse_iterator rend()
+  {
+    return reverse_iterator( begin() );
+  }
+  
+  const_reverse_iterator rend() const
+  {
+    return const_reverse_iterator( begin() );
+  }
 
-  iterator begin() { return _data;}
-  const_iterator begin() const { return _data;}
-  iterator end() { return _data + _size;}
-  const_iterator end() const { return _data + _size;}
-  iterator last() { return _data + _size - 1;}
-  const_iterator last() const { return _data  + _size - 1;}
+  iterator begin()
+  {
+    return _data;
+  }
+  
+  const_iterator begin() const
+  {
+    return _data;
+  }
+  
+  iterator end()
+  {
+    return _data + _size;
+  }
+  
+  const_iterator end() const
+  {
+    return _data + _size;
+  }
+  
+  iterator last()
+  {
+    return _data + _size - 1;
+  }
+  
+  const_iterator last() const
+  {
+    return _data  + _size - 1;
+  }
 
   void clear()
   {
     std::fill_n( begin(), N, T() );
     _size = 0;
   }
-
 
   template <class InputIterator>
   void assign ( InputIterator first, InputIterator last )
@@ -158,7 +231,10 @@ public:
   }
 
 private:
+  
   size_type _size;
   data_type _data;
 };
+
 #endif
+
