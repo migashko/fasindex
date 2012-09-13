@@ -7,6 +7,8 @@
 template<typename T>
 struct chunk
 {
+  typedef T value_type;
+
   size_t bits;
   T data[sizeof(size_t)*8];
 

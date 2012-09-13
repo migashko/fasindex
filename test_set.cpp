@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
   set<int> s = set<int>(value_compare(), allocator_type(manager)) ;
 
 
-  for (int i =0 ; i < 1024; i++ )
+  for (int i =0 ; i < 1024 * 2; i++ )
   {
     s.insert(i);
   }

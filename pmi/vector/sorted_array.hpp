@@ -9,7 +9,7 @@ class sorted_array
   : public array<T, N>
 {
   typedef array<T, N> super;
-  
+
 public:
   /*
   enum { dimension = N};
@@ -30,26 +30,26 @@ public:
 
   typedef Compare key_compare;
   typedef Compare value_compare;
-  
-  
+
+
   typedef typename super::value_type value_type;
   typedef typename super::data_type data_type;
   typedef typename super::size_type size_type;
-  
+
   typedef typename super::reference reference;
   typedef typename super::const_reference const_reference;
-  
+
   typedef typename super::pointer pointer;
   typedef typename super::const_pointer const_pointer;
-  
+
   typedef typename super::const_iterator const_iterator;
   typedef typename super::iterator iterator;
-  
+
   typedef typename super::reverse_iterator reverse_iterator;
   typedef typename super::const_reverse_iterator const_reverse_iterator;
-  
+
   typedef std::ptrdiff_t difference_type;
-  
+
 
   sorted_array( value_compare cmp = value_compare() )
     : super()
@@ -174,13 +174,13 @@ public:
 
   iterator insert ( const T& x )
   {
-    iterator position = std::lower_bound(x, _comparator );
+    iterator position = std::lower_bound(super::begin(), super::end(), x, _comparator );
     return super::insert(position, x);
   }
 
   void insert ( size_type n, const T& x )
   {
-    iterator position = std::lower_bound(x, _comparator );
+    iterator position = std::lower_bound(super::begin(), super::end(), x, _comparator );
     return super::insert(position, n, x);
   }
 
@@ -233,12 +233,12 @@ public:
 
   void insert( key_type key, mapped_type value )
   {
-    
+
   }
-  
+
 private:
   map_type _map;
-  size_t 
+  size_t
 };
 */
 

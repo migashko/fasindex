@@ -42,32 +42,40 @@ public:
   typedef _Alloc   allocator_type;
 
 private:
+  value_compare _comparator;
   allocator_type _allocator;
-  
+  typedef typename helper<_Key, _Compare>::array_type array_type;
+  array_tree< array_type > _tree;
 public:
 
-  typedef typename allocator_type::pointer             pointer;
-  typedef typename allocator_type::const_pointer       const_pointer;
-  typedef typename allocator_type::reference           reference;
-  typedef typename allocator_type::const_reference     const_reference;
+  typedef typename allocator_type::pointer             array_pointer;
+  typedef typename allocator_type::const_pointer       array_const_pointer;
+  typedef typename allocator_type::reference           array_reference;
+  typedef typename allocator_type::const_reference     array_const_reference;
 
   // Временное решение
   typedef _Key* iterator;
   typedef const _Key* const_iterator;
   typedef _Key* reverse_iterator;
   typedef const _Key* const_reverse_iterator;
-  
+
   typedef typename allocator_type::size_type           size_type;
   typedef typename allocator_type::difference_type     difference_type;
 
   set()
+    : _comparator()
+    , _allocator()
+    , _tree()
   {
-    throw not_impl();
+
   }
 
-  explicit set(const value_compare& ,const allocator_type& = allocator_type() )
+  explicit set(const value_compare& comp,const allocator_type& alloc = allocator_type() )
+    : _comparator(comp)
+    , _allocator(alloc)
+    , _tree()
   {
-    throw not_impl();
+
   }
 
   template<typename InputIterator>
@@ -99,7 +107,7 @@ public:
   {
     throw not_impl();
   }
-  
+
 #endif
 
   set&  operator=(const set& __x)
@@ -137,13 +145,13 @@ public:
     throw not_impl();
     return key_compare();
   }
-      
+
   value_compare value_comp() const
   {
     throw not_impl();
     return value_compare();
   }
-  
+
   allocator_type  get_allocator() const
   {
     throw not_impl();
@@ -198,7 +206,7 @@ public:
     throw not_impl();
     return reverse_iterator();
   }
-  
+
 #endif
 
   bool empty() const
@@ -224,10 +232,60 @@ public:
     throw not_impl();
   }
 
-  std::pair<iterator, bool> insert(const value_type& )
+  std::pair<iterator, bool> insert(const value_type& value)
   {
-    throw not_impl();
-    return std::pair<iterator, bool>();
+    /// TODO: сделать копию первого элемента массива в ОЗУ!!
+    auto treeitr = _tree.lower_bound(value);
+    if ( !_tree.empty() && treeitr == _tree.end()  )
+    {
+
+      treeitr = --_tree.end();
+      /// ??? здесь косяк (пьян)
+      if ( (*treeitr)->filled() && _comparator( (*treeitr)->back(), value) )
+        treeitr = _tree.end();
+
+      /*
+      std::cout << "set::insert " << "??" << std::endl;
+      treeitr = --_tree.end();
+      if ( _comparator( (*treeitr)->back(), value) )
+        treeitr = _tree.end();
+      else if ( (*treeitr)->filled() )
+      {
+        // TODO: split
+        throw std::domain_error("split");
+      }
+      */
+
+    }
+
+    if ( treeitr == _tree.end() )
+    {
+      std::cout << "new array" << std::endl;
+      array_pointer arr = _allocator.allocate(1);
+      arr->insert(value);
+      // TODO: сделать в offset pointer operator type* &&
+      treeitr = _tree.insert( arr.operator -> () ).first;
+    }
+    else
+    {
+      if ( (**treeitr)[0]!=value )
+      {
+        (*treeitr)->insert(value);
+      }
+      else
+      {
+        array_type *arr = *treeitr;
+        _tree.erase(treeitr--);
+        arr->insert(value);
+        // TODO: сделать проверку
+        treeitr = _tree.insert(treeitr, arr);
+      }
+    }
+
+    // TODO: это multiset
+    //throw not_impl();
+    // TODO: сделать!! итераторы
+    return std::pair<iterator, bool>(iterator(), true);
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -270,7 +328,7 @@ public:
     throw not_impl();
     this->insert(lst.begin(), lst.end());
   }
-  
+
 #endif
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -280,14 +338,14 @@ public:
     throw not_impl();
     return iterator();
   }
-  
+
 #else
 
   void  erase(iterator)
   {
     throw not_impl();
   }
-  
+
 #endif
 
   size_type erase(const key_type& )
@@ -303,7 +361,7 @@ public:
     throw not_impl();
     return iterator();
   }
-  
+
 #else
 
 
@@ -311,7 +369,7 @@ public:
   {
     throw not_impl();
   }
-  
+
 #endif
 
   void clear()

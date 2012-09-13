@@ -20,18 +20,18 @@ public:
   {
     this->close();
   }
-  
+
   mmap_buffer()
     : buffer_base()
     , _fd(-1)
   {
   }
-  
+
   mmap_buffer(const char* path, size_t size = 0)
   {
     this->open( path, size );
   }
-  
+
   void close()
   {
     if ( _addr!=0 )
@@ -40,16 +40,16 @@ public:
         std::cout << "mmap_buffer::msync fail" << std::endl;
       ::munmap( _addr, _size );
     }
-    
+
     if (_fd!=-1)
       ::close( _fd );
     std::cout << "mmap_buffer::close" << std::endl;
   }
 
-  
+
   bool open(const char* path, size_t size = 0)
   {
-    
+
     _fd = ::open(path, O_RDWR | O_CREAT, /*(mode_t)0600*/ S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH );
 
     if ( _fd == -1)
@@ -64,7 +64,7 @@ public:
 
     if ( size < static_cast<size_t>(sb.st_size))
       size = sb.st_size;
-    
+
     if ( size > static_cast<size_t>(sb.st_size) )
     {
       if ( -1 == lseek(_fd, size-1, SEEK_SET) )
@@ -87,17 +87,17 @@ public:
     write if no physical memory is available.  See also the discussion of
               the file /proc/sys/vm/overcommit_memory in proc(5).  In kernels before
               2.6, this flag only had effect for private writable mappings.
-    
+
     */
-    
+
     _addr = (char*)::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED/*MAP_PRIVATE*/ /*| MAP_HUGETLB */| MAP_NORESERVE, _fd, 0);
-    
+
     if (_addr == MAP_FAILED)
     {
       this->close();
       return false;
     }
-    
+
     _size = size;
     if ( -1 == ::msync(_addr, _size, MS_SYNC) )
     {
@@ -107,21 +107,22 @@ public:
     return true;
   }
 
-  void clear() 
+  void clear()
   {
     _size = 0;
     resize(0);
     ftruncate(_fd, 0);
   }
 
-  
+
   bool resize(size_t size)
   {
+    std::cout << "resize: " << size << std::endl;
     if (size > _size)
     {
       if ( -1 == ::lseek(_fd, size-1, SEEK_SET) )
         return false;
-      write(_fd, "", 1); 
+      write(_fd, "", 1);
     }
     else if (size < _size)
     {
@@ -136,7 +137,7 @@ public:
     return true;
   }
 
-  operator bool () const 
+  operator bool () const
   {
     return _fd != -1;
   }
@@ -145,7 +146,7 @@ public:
   {
     ::msync(_addr, _size, async ? MS_ASYNC : MS_SYNC);
   }
-  
+
 private:
   int _fd;
 };
