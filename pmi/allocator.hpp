@@ -17,6 +17,8 @@ struct allocator
   typedef const T& const_reference;
   typedef size_t size_type;
   typedef std::ptrdiff_t difference_type;
+
+  allocator(): _mmm(0) { }
   
   allocator(allocation_manager& mmm): _mmm(&mmm) { }
   /*managed_allocator(const self& s): _mmm(s._mmm) { }

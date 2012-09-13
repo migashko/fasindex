@@ -3,6 +3,7 @@
 
 #include <pmi/array.hpp>
 
+// TODO: сделать операции < > и пр.
 template<typename T, size_t N, typename Compare = std::less<T> >
 class sorted_array
   : public array<T, N>
@@ -27,7 +28,9 @@ public:
   typedef  Compare comparator;
   */
 
-  typedef  Compare comparator;
+  typedef Compare key_compare;
+  typedef Compare value_compare;
+  
   
   typedef typename super::value_type value_type;
   typedef typename super::data_type data_type;
@@ -48,7 +51,7 @@ public:
   typedef std::ptrdiff_t difference_type;
   
 
-  sorted_array( comparator cmp = comparator() )
+  sorted_array( value_compare cmp = value_compare() )
     : super()
     , _comparator(cmp)
   {};
@@ -205,7 +208,7 @@ public:
   }*/
 
 private:
-  comparator _comparator;
+  value_compare _comparator;
 };
 
 /*

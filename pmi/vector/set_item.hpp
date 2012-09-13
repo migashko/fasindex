@@ -1,7 +1,9 @@
 #ifndef SET_ITEM_HPP
 #define SET_ITEM_HPP
 
-#include <pmi/array/sorted_array.hpp>
+#include <set>
+#include <pmi/vector/sorted_array.hpp>
+#include <pmi/allocator.hpp>
 
 /*
 struct set_item_head
@@ -27,19 +29,29 @@ class set_item
 
 // Не нужно - мы по size определяем что не используется блок
 
-template<typename Arr>
+template<typename T, typename Compare>
 struct array_compare
 {
-
+  array_compare( const Compare& cmp = Compare() )
+    : _compare(cmp)
+  {
+    
+  }
+  
+  // Сделать < > и упростить
+  bool operator()(const T* first, const T* second) const
+  {
+    // Пустые массивы не допустимы
+    return _compare( (*first)[0], (*second)[0] );
+  }
+  
+private:
+  
+  Compare _compare;
 };
 
-template<typename ArrayType, typename Compare = std::less<T> >
-class set_items
-{
-public:
-  typedef std::set<ArrayType*, Compare >
-private:
-}
+template< typename SortedArray> 
+struct array_tree: std::set< SortedArray*,  array_compare< SortedArray*, typename SortedArray::value_compare> > {};
 
 
 #endif
