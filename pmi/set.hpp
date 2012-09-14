@@ -3,9 +3,12 @@
 
 #include <functional>
 #include <memory>
+#include <map>
 
-#include <pmi/vector/set_item.hpp>
+//#include <pmi/vector/set_item.hpp>
 #include <pmi/allocator.hpp>
+#include <pmi/map_iterator.hpp>
+#include <pmi/vector/sorted_array.hpp>
 
 struct not_impl: std::exception {};
 
@@ -16,9 +19,11 @@ template<
 struct helper
 {
   typedef sorted_array<_Key, 1024, _Compare> array_type;
-  typedef array_tree< array_type > array_tree_type;
+  //typedef array_tree< array_type, _Key, _Compare > array_tree_type;
   typedef allocator< array_type, chain_memory<array_type, mmap_buffer> > allocator_type;
+  typedef std::multimap< _Key,  typename allocator_type::pointer, _Compare > array_tree_type;
 };
+
 
 template<
   typename _Key,
@@ -41,11 +46,6 @@ public:
   typedef _Compare value_compare;
   typedef _Alloc   allocator_type;
 
-private:
-  value_compare _comparator;
-  allocator_type _allocator;
-  typedef typename helper<_Key, _Compare>::array_type array_type;
-  array_tree< array_type > _tree;
 public:
 
   typedef typename allocator_type::pointer             array_pointer;
@@ -53,14 +53,27 @@ public:
   typedef typename allocator_type::reference           array_reference;
   typedef typename allocator_type::const_reference     array_const_reference;
 
-  // Временное решение
-  typedef _Key* iterator;
-  typedef const _Key* const_iterator;
-  typedef _Key* reverse_iterator;
-  typedef const _Key* const_reverse_iterator;
 
   typedef typename allocator_type::size_type           size_type;
   typedef typename allocator_type::difference_type     difference_type;
+
+private:
+  value_compare _comparator;
+  allocator_type _allocator;
+  typedef helper<_Key, _Compare> help;
+  typedef typename help::array_tree_type array_tree_type;
+  array_tree_type _tree;
+public:
+  typedef typename help::array_type array_type;
+  typedef typename array_tree_type::iterator tree_iteartor;
+  typedef typename array_tree_type::const_iterator const_tree_iteartor;
+
+    // Временное решение
+  typedef map_iterator<tree_iteartor> iterator;
+  typedef map_iterator<const_tree_iteartor> const_iterator;
+
+  typedef std::reverse_iterator<iterator> reverse_iterator;
+  typedef const std::reverse_iterator<iterator> const_reverse_iterator;
 
   set()
     : _comparator()
@@ -158,28 +171,48 @@ public:
     return allocator_type();
   }
 
-  iterator  begin() const
+  iterator  begin()
   {
-    throw not_impl();
-    return iterator();
+    return iterator(_tree.begin(), 0);
   }
 
-  iterator end() const
+  iterator end()
   {
-    throw not_impl();
-    return iterator();
+    return iterator(_tree.end(), 0 );
   }
 
-  reverse_iterator rbegin() const
+  const_iterator  begin() const
+  {
+    return const_iterator(_tree.begin(), 0);
+  }
+
+  const_iterator end() const
+  {
+    return const_iterator( _tree.end(), 0 );
+  }
+
+  reverse_iterator rbegin()
   {
     throw not_impl();
     return reverse_iterator();
   }
 
-  reverse_iterator rend() const
+  reverse_iterator rend()
   {
     throw not_impl();
     return reverse_iterator();
+  }
+
+  const_reverse_iterator rbegin() const
+  {
+    throw not_impl();
+    return const_reverse_iterator();
+  }
+
+  const_reverse_iterator rend() const
+  {
+    throw not_impl();
+    return const_reverse_iterator();
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
@@ -234,58 +267,91 @@ public:
 
   std::pair<iterator, bool> insert(const value_type& value)
   {
+    
     /// TODO: сделать копию первого элемента массива в ОЗУ!!
-    auto treeitr = _tree.lower_bound(value);
+    
+    auto treeitr = _tree.upper_bound(value);
+
+    if ( !_tree.empty() && treeitr!=_tree.begin() )
+      --treeitr;
+
+    
+    /*
     if ( !_tree.empty() && treeitr == _tree.end()  )
     {
-
+    
       treeitr = --_tree.end();
       /// ??? здесь косяк (пьян)
-      if ( (*treeitr)->filled() && _comparator( (*treeitr)->back(), value) )
+      if ( treeitr->second->filled() && _comparator( treeitr->second->back(), value) )
         treeitr = _tree.end();
-
-      /*
-      std::cout << "set::insert " << "??" << std::endl;
-      treeitr = --_tree.end();
-      if ( _comparator( (*treeitr)->back(), value) )
-        treeitr = _tree.end();
-      else if ( (*treeitr)->filled() )
-      {
-        // TODO: split
-        throw std::domain_error("split");
-      }
-      */
-
     }
+    else if ( treeitr != _tree.begin())
+      --treeitr;
+    */
 
+    
     if ( treeitr == _tree.end() )
     {
-      std::cout << "new array" << std::endl;
+      
+     // std::cout << "new array" << std::endl;
       array_pointer arr = _allocator.allocate(1);
       arr->insert(value);
       // TODO: сделать в offset pointer operator type* &&
-      treeitr = _tree.insert( arr.operator -> () ).first;
+      treeitr = _tree.insert( std::make_pair((*arr)[0], arr) );
     }
     else
     {
-      if ( (**treeitr)[0]!=value )
+      //std::cout << "insert 5" << std::endl;
+      if ( !treeitr->second->filled() )
       {
-        (*treeitr)->insert(value);
+        /// ------------ БАГИ!!! -------------------
+        /*std::cout << "insert 6" << std::endl;
+        if ( treeitr->first!=value )
+        {*/
+          //std::cout << "insert 7" << std::endl;
+          const_cast<array_type&>(*treeitr->second).insert(value);
+        /*}
+        else
+        {
+          std::cout << "insert 8" << std::endl;
+          array_pointer arr = treeitr->second;
+          std::cout << "insert 8.1" << std::endl;
+          _tree.erase( treeitr != _tree.begin() ? treeitr-- : treeitr);
+          std::cout << "insert 8.2" << std::endl;
+          arr->insert(value);
+          std::cout << "insert 8.3" << std::endl;
+          // TODO: сделать проверку
+          treeitr = _tree.insert( treeitr, std::make_pair((*arr)[0], arr) );
+          std::cout << "insert 8.4" << std::endl;
+        }*/
       }
       else
       {
-        array_type *arr = *treeitr;
-        _tree.erase(treeitr--);
-        arr->insert(value);
-        // TODO: сделать проверку
-        treeitr = _tree.insert(treeitr, arr);
+        
+        array_pointer arr1 = treeitr->second;
+        //std::for_each(arr1->begin(), arr1->end(), [](int value){ std::cout << value << " ";} );  std::cout << std::endl;
+        array_pointer arr2 = _allocator.allocate(1);
+        // 3 / 2 = 1
+        arr2->assign( arr1->begin() + arr1->size()/2, arr1->end() );
+        //std::for_each(arr2->begin(), arr2->end(), [](int value){ std::cout << value << " ";} );  std::cout << std::endl;
+        arr1->resize( arr1->size()/2 );
+        //std::for_each(arr1->begin(), arr1->end(), [](int value){ std::cout << value << " ";} );  std::cout << std::endl;
+        //std::cout << "-----------------------------" << std::endl;
+        std::cout << "-------------------------" << std::endl;
+        std::cout << (*arr1)[0] << std::endl;
+        std::for_each( arr1->begin(), arr1->end(), [](int v) {  std::cout << v << " "; std::cout.flush();} );
+        std::cout << std::endl << (*arr2)[0] << std::endl;
+        std::for_each( arr2->begin(), arr2->end(), [](int v) {  std::cout << v << " "; std::cout.flush();} );
+        std::cout << "-------------------------" << std::endl;
+        treeitr = _tree.insert(treeitr, std::make_pair((*arr2)[0], arr2) );
       }
     }
 
+    //std::cout << "insert 10" << std::endl;
     // TODO: это multiset
     //throw not_impl();
     // TODO: сделать!! итераторы
-    return std::pair<iterator, bool>(iterator(), true);
+    return std::pair<iterator, bool>(iterator(_tree.end(), -1), true);
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__

@@ -39,20 +39,21 @@ struct array_compare
   }
 
   // Сделать < > и упростить
-  bool operator()(const T* first, const T* second) const
+  bool operator()(const T first, const T second) const
   {
+    std::cout << (*first)[0] << "<" << (*second)[0] << std::endl;
     // Пустые массивы не допустимы
     return _compare( (*first)[0], (*second)[0] );
   }
 
 
-  bool operator()(const typename T::value_type& first, const T* second) const
+  bool operator()(const typename T::value_type& first, const T second) const
   {
     // Пустые массивы не допустимы
     return _compare( first, (*second)[0] );
   }
 
-    bool operator()(const T* first, const typename T::value_type& second) const
+    bool operator()(const T first, const typename T::value_type& second) const
   {
     // Пустые массивы не допустимы
     return _compare( (*first)[0], second );
@@ -63,24 +64,24 @@ private:
   Compare _compare;
 };
 
-template< typename SortedArray>
+template< typename ArrayPointer, typename ItemType, typename ItemCompare>
 class array_tree
-  : public std::set< SortedArray*,  array_compare< SortedArray, typename SortedArray::value_compare> >
+  : public std::set< ArrayPointer,  array_compare< ArrayPointer, ItemCompare> >
 {
-  typedef std::set< SortedArray*,  array_compare< SortedArray, typename SortedArray::value_compare> >  super;
+  typedef std::set< ArrayPointer,  array_compare< ArrayPointer, ItemCompare> >  super;
 public:
   typedef typename super::iterator iterator;
   typedef typename super::const_iterator const_iterator;
-  typedef typename SortedArray::value_type array_key_type;
+  typedef ItemType array_key_type;
 
 
-  iterator lower_bound(const array_key_type& key)
+  iterator key_lower_bound(const array_key_type& key)
   {
     return std::lower_bound( super::begin(), super::end(), key, typename super::key_compare());
     //return super::lower_bound( &&key );
   }
 
-  const_iterator lower_bound(const array_key_type& key) const
+  const_iterator key_lower_bound(const array_key_type& key) const
   {
     return std::lower_bound( super::begin(), super::end(), key, typename super::key_compare() );
     // return super::lower_bound( &key );

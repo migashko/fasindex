@@ -54,12 +54,13 @@ public:
     ch->acquire(1);
     new (addr+offset)chunk_type;
 
+    /*
     std::cout << "acquire offset " << offset << std::endl;
     std::cout << "acquire sizeof(chain_type) " << sizeof(chain_type) << std::endl;
     std::cout << "acquire sizeof(chunk_type) " << sizeof(chunk_type) << std::endl;
     std::cout << "acquire sizeof(chunk_type::value_type) " << sizeof(typename chunk_type::value_type) << std::endl;
     std::cout << "acquire sizeof(chunk_type::value_type::dimension) " << chunk_type::value_type::dimension << std::endl;
-
+  */
 
     return true;
   }

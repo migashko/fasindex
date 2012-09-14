@@ -174,13 +174,13 @@ public:
 
   iterator insert ( const T& x )
   {
-    iterator position = std::lower_bound(super::begin(), super::end(), x, _comparator );
+    iterator position = std::upper_bound(super::begin(), super::end(), x, _comparator );
     return super::insert(position, x);
   }
 
   void insert ( size_type n, const T& x )
   {
-    iterator position = std::lower_bound(super::begin(), super::end(), x, _comparator );
+    iterator position = std::upper_bound(super::begin(), super::end(), x, _comparator );
     return super::insert(position, n, x);
   }
 

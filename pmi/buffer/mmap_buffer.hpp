@@ -43,7 +43,7 @@ public:
 
     if (_fd!=-1)
       ::close( _fd );
-    std::cout << "mmap_buffer::close" << std::endl;
+    //std::cout << "mmap_buffer::close" << std::endl;
   }
 
 
@@ -117,7 +117,7 @@ public:
 
   bool resize(size_t size)
   {
-    std::cout << "resize: " << size << std::endl;
+    //std::cout << "resize: " << size << std::endl;
     if (size > _size)
     {
       if ( -1 == ::lseek(_fd, size-1, SEEK_SET) )
