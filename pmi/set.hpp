@@ -65,6 +65,10 @@ private:
   array_tree_type _tree;
 public:
   typedef typename help::array_type array_type;
+
+  typedef typename array_type::iterator array_iterator;
+  typedef typename array_type::const_iterator array_const_iterator;
+  
   typedef typename array_tree_type::iterator tree_iteartor;
   typedef typename array_tree_type::const_iterator const_tree_iteartor;
 
@@ -265,93 +269,95 @@ public:
     throw not_impl();
   }
 
-  std::pair<iterator, bool> insert(const value_type& value)
+  void check()
   {
-    
-    /// TODO: сделать копию первого элемента массива в ОЗУ!!
-    
-    auto treeitr = _tree.upper_bound(value);
-
-    if ( !_tree.empty() && treeitr!=_tree.begin() )
-      --treeitr;
-
-    
-    /*
-    if ( !_tree.empty() && treeitr == _tree.end()  )
+    int current = 0;
+    std::cout << "================= check =====================" << std::endl;
+    std::for_each( _tree.begin(), _tree.end(), [&](  const typename decltype(_tree)::value_type& v)
     {
-    
-      treeitr = --_tree.end();
-      /// ??? здесь косяк (пьян)
-      if ( treeitr->second->filled() && _comparator( treeitr->second->back(), value) )
-        treeitr = _tree.end();
-    }
-    else if ( treeitr != _tree.begin())
-      --treeitr;
-    */
+      std::cout << v.first  << "!" << std::endl;
+      std::for_each( v.second->begin(), v.second->end(), [&](int vv)
+      {
+        std::cout << vv  << " ";
+        std::cout.flush();
+        if (current > vv)
+          abort();
+        current = vv;
+      });
+      std::cout.flush();
+      std::cout << "<->" << std::endl;;
+    });
+    std::cout << std::endl;
+    std::cout << "================= end check =====================" << std::endl;
+  }
 
+  iterator insert(const value_type& value)
+  {
+    //1. Находим последний элемент куда будем вставлять
+    auto treeitr = _tree.end();
+    array_iterator aitr;
     
+    if ( !_tree.empty() )
+    {
+      treeitr = _tree.upper_bound(value);
+      if ( treeitr == _tree.end() )
+      {
+        if ( value <= _tree.begin()->first )
+          treeitr = _tree.begin();
+        else
+          treeitr = (++_tree.rbegin()).base();
+      }
+      else if ( _comparator(value, treeitr->first) )
+      {
+        if ( treeitr != _tree.begin() )
+          --treeitr;
+      }
+    }
+
     if ( treeitr == _tree.end() )
     {
-      
-     // std::cout << "new array" << std::endl;
+      // Новый массив
       array_pointer arr = _allocator.allocate(1);
-      arr->insert(value);
-      // TODO: сделать в offset pointer operator type* &&
-      treeitr = _tree.insert( std::make_pair((*arr)[0], arr) );
+      aitr = arr->insert(value);
+      treeitr = _tree.insert( std::make_pair( value, arr) );
     }
     else
     {
-      //std::cout << "insert 5" << std::endl;
-      if ( !treeitr->second->filled() )
+      if ( treeitr->second->filled() )
       {
-        /// ------------ БАГИ!!! -------------------
-        /*std::cout << "insert 6" << std::endl;
-        if ( treeitr->first!=value )
-        {*/
-          //std::cout << "insert 7" << std::endl;
-          const_cast<array_type&>(*treeitr->second).insert(value);
-        /*}
-        else
-        {
-          std::cout << "insert 8" << std::endl;
-          array_pointer arr = treeitr->second;
-          std::cout << "insert 8.1" << std::endl;
-          _tree.erase( treeitr != _tree.begin() ? treeitr-- : treeitr);
-          std::cout << "insert 8.2" << std::endl;
-          arr->insert(value);
-          std::cout << "insert 8.3" << std::endl;
-          // TODO: сделать проверку
-          treeitr = _tree.insert( treeitr, std::make_pair((*arr)[0], arr) );
-          std::cout << "insert 8.4" << std::endl;
-        }*/
+        // Расщипляем массив
+        array_pointer arr1 = treeitr->second;
+        array_pointer arr2 = _allocator.allocate(1);
+        arr2->assign( arr1->begin() + arr1->size()/2, arr1->end() );
+        arr1->resize( arr1->size()/2 );
+
+        _tree.insert( treeitr, std::make_pair((*arr2)[0], arr2) );
+        // TDOD: Избавиться от рекурсии
+        return insert(value);
       }
       else
       {
-        
-        array_pointer arr1 = treeitr->second;
-        //std::for_each(arr1->begin(), arr1->end(), [](int value){ std::cout << value << " ";} );  std::cout << std::endl;
-        array_pointer arr2 = _allocator.allocate(1);
-        // 3 / 2 = 1
-        arr2->assign( arr1->begin() + arr1->size()/2, arr1->end() );
-        //std::for_each(arr2->begin(), arr2->end(), [](int value){ std::cout << value << " ";} );  std::cout << std::endl;
-        arr1->resize( arr1->size()/2 );
-        //std::for_each(arr1->begin(), arr1->end(), [](int value){ std::cout << value << " ";} );  std::cout << std::endl;
-        //std::cout << "-----------------------------" << std::endl;
-        std::cout << "-------------------------" << std::endl;
-        std::cout << (*arr1)[0] << std::endl;
-        std::for_each( arr1->begin(), arr1->end(), [](int v) {  std::cout << v << " "; std::cout.flush();} );
-        std::cout << std::endl << (*arr2)[0] << std::endl;
-        std::for_each( arr2->begin(), arr2->end(), [](int v) {  std::cout << v << " "; std::cout.flush();} );
-        std::cout << "-------------------------" << std::endl;
-        treeitr = _tree.insert(treeitr, std::make_pair((*arr2)[0], arr2) );
+        if ( _comparator(value, treeitr->first) )
+        {
+          // Вставляем элемент меньше первого в массиве
+          array_pointer arr = treeitr->second;
+          _tree.erase(treeitr);
+          aitr = arr->insert(value);
+          treeitr = _tree.insert( std::make_pair( value, arr) );
+        }
+        else
+        {
+          // Для всех остальных (больше первого )
+          aitr = treeitr->second->insert(value);
+        }
       }
     }
 
-    //std::cout << "insert 10" << std::endl;
-    // TODO: это multiset
-    //throw not_impl();
-    // TODO: сделать!! итераторы
-    return std::pair<iterator, bool>(iterator(_tree.end(), -1), true);
+    //check();
+
+    //if ( !flag ) abort();
+    
+    return iterator( treeitr, std::distance(treeitr->second->begin(), aitr) );
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
