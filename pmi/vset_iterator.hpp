@@ -2,17 +2,17 @@
 #define MAP_ITERATOR_HPP
 
 template<typename TreeIterator>
-class map_iterator
+class vset_iterator
 {
 public:
-  typedef map_iterator<TreeIterator> self;
+  typedef vset_iterator<TreeIterator> self;
   typedef TreeIterator tree_iteartor;
   typedef typename tree_iteartor::value_type tree_node;
   typedef typename tree_node::first_type key_type;
   typedef typename tree_node::second_type mapped_type;
   typedef typename mapped_type::value_type array_type;
   typedef typename array_type::value_type array_value_type;
-  
+
   typedef typename std::iterator_traits<array_value_type*>::iterator_category iterator_category;
   typedef typename std::iterator_traits<array_value_type*>::value_type value_type;
   typedef typename std::iterator_traits<array_value_type*>::difference_type difference_type;
@@ -20,14 +20,14 @@ public:
   typedef typename std::iterator_traits<array_value_type*>::reference reference;
 
 
-  map_iterator(tree_iteartor itr, difference_type pos)
+  vset_iterator(tree_iteartor itr, difference_type pos)
     : _itr(itr)
     , _pos(pos)
   {
-    
+
   }
-  
-  map_iterator(const self& slf)
+
+  vset_iterator(const self& slf)
     : _itr(slf._itr)
     , _pos(slf._pos)
   {}
@@ -100,16 +100,16 @@ public:
     {
       n -= _itr->second->size() - _pos;
       ++_itr;
-      
+
       while ( n >= static_cast<difference_type>( _itr->second->size() ) )
       {
         n -= _itr->second->size();
         ++_itr;
       }
     }
-    
+
     _pos = n;
-    
+
     return *this;
   }
 
@@ -177,20 +177,20 @@ public:
 
 
   template<typename TI>
-  friend typename map_iterator<TI>::difference_type operator - ( map_iterator<TI> r1, map_iterator<TI> r2 );
+  friend typename vset_iterator<TI>::difference_type operator - ( vset_iterator<TI> r1, vset_iterator<TI> r2 );
 
 
   tree_iteartor     get_tree_iteartor() const { return _itr;}
-  difference_type   get_position() const { return _pos; } 
+  difference_type   get_position() const { return _pos; }
 private:
   tree_iteartor _itr;
   difference_type _pos;
 };
 
 template<typename TI, typename Dist>
-inline map_iterator<TI> operator +
+inline vset_iterator<TI> operator +
   (
-    map_iterator<TI> r,
+    vset_iterator<TI> r,
     Dist n
   )
 {
@@ -198,19 +198,19 @@ inline map_iterator<TI> operator +
 }
 
 template<typename TI, typename Dist>
-inline map_iterator<TI> operator +
+inline vset_iterator<TI> operator +
   (
     Dist n,
-    map_iterator<TI> r
+    vset_iterator<TI> r
   )
 {
   return r+= n;
 }
 
 template<typename TI, typename Dist>
-inline map_iterator<TI> operator -
+inline vset_iterator<TI> operator -
   (
-    map_iterator<TI> r,
+    vset_iterator<TI> r,
     Dist n
   )
 {
@@ -218,33 +218,33 @@ inline map_iterator<TI> operator -
 }
 
 template<typename TI, typename Dist>
-inline map_iterator<TI> operator -
+inline vset_iterator<TI> operator -
   (
     Dist n,
-    map_iterator<TI> r
+    vset_iterator<TI> r
   )
 {
   return r -= n;
 }
 
 template<typename TI>
-inline typename map_iterator<TI>::difference_type operator -
+inline typename vset_iterator<TI>::difference_type operator -
   (
-    map_iterator<TI> r1,
-    map_iterator<TI> r2
+    vset_iterator<TI> r1,
+    vset_iterator<TI> r2
   )
 {
-  
+
   if ( r1._itr == r2._itr )
     return  r1._pos - r2._pos;
 
-  typename map_iterator<TI>::difference_type result = r1._itr->second->size() - r1._pos;
+  typename vset_iterator<TI>::difference_type result = r1._itr->second->size() - r1._pos;
   for ( ++r1; r1!=r2; ++r1 )
     result += r1._itr->second->size();
   result += r1._pos;
-  
+
   return result;
-    
+
   // return r1._offset - r2._offset;
 }
 

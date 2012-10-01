@@ -7,8 +7,8 @@
 
 //#include <pmi/vector/set_item.hpp>
 #include <pmi/allocator.hpp>
-#include <pmi/map_iterator.hpp>
-#include <pmi/vector/sorted_array.hpp>
+#include <pmi/vset_iterator.hpp>
+#include <pmi/sorted_array.hpp>
 
 struct not_impl: std::exception {};
 
@@ -31,7 +31,7 @@ template<
   typename _Alloc = typename helper<_Key, _Compare>::allocator_type
   //typename _Alloc = std::allocator< sorted_array<_Key, 1024, _Compare> >
 >
-class set
+class vset
 {
   /*
   typedef sorted_array<_Key, 1024, _Compare> array_type;
@@ -69,19 +69,19 @@ public:
 
   typedef typename array_type::iterator array_iterator;
   typedef typename array_type::const_iterator array_const_iterator;
-  
+
   typedef typename array_tree_type::iterator tree_iteartor;
   typedef typename array_tree_type::const_iterator const_tree_iteartor;
 
     // Временное решение
-  typedef map_iterator<tree_iteartor> iterator;
-  typedef const map_iterator<tree_iteartor> const_iterator;
+  typedef vset_iterator<tree_iteartor> iterator;
+  typedef const vset_iterator<tree_iteartor> const_iterator;
   //typedef map_iterator<const_tree_iteartor> const_iterator;
 
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef const std::reverse_iterator<iterator> const_reverse_iterator;
 
-  set()
+  vset()
     : _comparator()
     , _allocator()
     , _tree()
@@ -90,7 +90,7 @@ public:
 
   }
 
-  explicit set(const value_compare& comp,const allocator_type& alloc = allocator_type() )
+  explicit vset(const value_compare& comp,const allocator_type& alloc = allocator_type() )
     : _comparator(comp)
     , _allocator(alloc)
     , _tree()
@@ -100,20 +100,20 @@ public:
   }
 
   template<typename InputIterator>
-  set(InputIterator, InputIterator)
+  vset(InputIterator, InputIterator)
   {
     _size = 0;
     throw not_impl();
   }
 
   template<typename InputIterator>
-  set(InputIterator, InputIterator, const value_compare& , const allocator_type&  = allocator_type() )
+  vset(InputIterator, InputIterator, const value_compare& , const allocator_type&  = allocator_type() )
   {
     _size = 0;
     throw not_impl();
   }
 
-  set(const set& )
+  vset(const vset& )
   {
     _size = 0;
     throw not_impl();
@@ -121,14 +121,14 @@ public:
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-  set(set&& __x)
+  vset(vset&& __x)
   {
     _size = 0;
     throw not_impl();
     // TODO: : _M_t(std::move(__x._M_t))
   }
 
-  set( std::initializer_list<value_type>, const value_compare& = value_compare(), const allocator_type&  = allocator_type())
+  vset( std::initializer_list<value_type>, const value_compare& = value_compare(), const allocator_type&  = allocator_type())
   {
     _size = 0;
     throw not_impl();
@@ -136,7 +136,7 @@ public:
 
 #endif
 
-  set&  operator=(const set& __x)
+  vset&  operator=(const vset& __x)
   {
     _size = 0;
     throw not_impl();
@@ -145,7 +145,7 @@ public:
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-  set& operator=(set&& __x)
+  vset& operator=(vset&& __x)
   {
     _size = 0;
     throw not_impl();
@@ -156,7 +156,7 @@ public:
     return *this;
   }
 
-  set& operator=( std::initializer_list<value_type> )
+  vset& operator=( std::initializer_list<value_type> )
   {
     throw not_impl();
     /*this->clear();
@@ -261,7 +261,7 @@ public:
     return _tree.max_size();
   }
 
-  void swap( set& s )
+  void swap( vset& s )
   {
     std::swap(s._comparator, _comparator);
     std::swap(s._allocator, _allocator);
@@ -301,7 +301,7 @@ public:
     //1. Находим последний элемент куда будем вставлять
     auto treeitr = _tree.end();
     array_iterator aitr;
-    
+
     if ( !_tree.empty() )
     {
       treeitr = _tree.upper_bound(value);
@@ -476,40 +476,30 @@ public:
     return size_type();
   }
 
-  iterator find(const key_type&)
+  iterator find(const key_type& key)
   {
-    throw not_impl();
-    // return iterator();
+    iterator itr = this->lower_bound(key);
+    return itr == this->end() || *itr!=key ? this->end() : itr;
   }
 
-  const_iterator find(const key_type& ) const
+  const_iterator find(const key_type& key ) const
   {
-    throw not_impl();
-    // return const_iterator();
+    const_iterator itr = this->lower_bound(key);
+    return itr == this->end() || *itr!=key ? this->end() : itr;
   }
 
   iterator lower_bound(const key_type& key)
   {
     auto treeitr = _tree.lower_bound(key);
-    //std::cout << "lower_bound 1 key=" << key << " first=" << (_tree.begin() + 1)->first << std::endl;
+
     if ( treeitr == _tree.end() )
       treeitr = _tree.begin();
-    std::cout << "lower_bound 1 key=" << key << " first=" << treeitr->first << std::endl;
-      //return this->end();
-    std::cout << "lower_bound 2 " << treeitr->second->empty() << std::endl;
+
     auto arrayitr = std::lower_bound( treeitr->second->begin(), treeitr->second->end(), key, _comparator );
-    std::cout << "lower_bound 2.1"<< std::endl;
+
     if ( arrayitr == treeitr->second->end() )
-    {
-      std::cout << "lower_bound fail"<< std::endl;
-      for (auto itr = treeitr->second->begin(); itr!=treeitr->second->end(); ++itr )
-      {
-        std::cout << ":::" << *itr << std::endl;
-      }
       return this->end();
-    }
-    std::cout << "lower_bound 3"<< std::endl;
-    std::cout << "lower_bound: " << std::distance(treeitr->second->begin(), arrayitr) << std::endl;
+
     return iterator(treeitr, std::distance(treeitr->second->begin(), arrayitr));
   }
 
@@ -521,7 +511,7 @@ public:
     auto arrayitr = std::lower_bound( treeitr->second->begin(), treeitr->second->end(), key, _comparator );
     if ( arrayitr == treeitr->second->end() )
       return this->end();
-    std::cout << "lower_bound: " << std::distance(treeitr->second->begin(), arrayitr) << std::endl;
+
     return iterator(treeitr, std::distance(treeitr->second->begin(), arrayitr));
   }
 
@@ -529,14 +519,14 @@ public:
   {
     if ( _tree.empty() )
       return this->end();
-    
+
     auto treeitr = _tree.upper_bound(key);
-    
+
     if ( treeitr != _tree.begin() )
       --treeitr;
-    
+
     auto arrayitr = std::upper_bound( treeitr->second->begin(), treeitr->second->end(), key, _comparator );
-    
+
     return iterator(treeitr, std::distance(treeitr->second->begin(), arrayitr) );
   }
 
@@ -573,15 +563,15 @@ public:
 
 
   template<typename _K1, typename _C1, typename _A1>
-  friend bool operator==(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
+  friend bool operator==(const vset<_K1, _C1, _A1>&, const vset<_K1, _C1, _A1>&);
 
   template<typename _K1, typename _C1, typename _A1>
-  friend bool operator<(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
+  friend bool operator<(const vset<_K1, _C1, _A1>&, const vset<_K1, _C1, _A1>&);
 
 };
 
 template<typename _Key, typename _Compare, typename _Alloc>
-inline bool operator==(const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _Compare, _Alloc>& __y)
+inline bool operator==(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
 {
   throw not_impl();
   // return __x._M_t == __y._M_t;
@@ -589,7 +579,7 @@ inline bool operator==(const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _
 }
 
 template<typename _Key, typename _Compare, typename _Alloc>
-inline bool operator< (const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _Compare, _Alloc>& __y)
+inline bool operator< (const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
 {
   throw not_impl();
   // return __x._M_t < __y._M_t;
@@ -598,31 +588,31 @@ inline bool operator< (const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _
 
 template<typename _Key, typename _Compare, typename _Alloc>
 inline bool
-operator!=(const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _Compare, _Alloc>& __y)
+operator!=(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
 {
   return !(__x == __y);
 }
 
 template<typename _Key, typename _Compare, typename _Alloc>
-inline bool operator>(const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _Compare, _Alloc>& __y)
+inline bool operator>(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
 {
   return __y < __x;
 }
 
 template<typename _Key, typename _Compare, typename _Alloc>
-inline bool operator<=(const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _Compare, _Alloc>& __y)
+inline bool operator<=(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
 {
   return !(__y < __x);
 }
 
 template<typename _Key, typename _Compare, typename _Alloc>
-inline bool operator>=(const set<_Key, _Compare, _Alloc>& __x, const set<_Key, _Compare, _Alloc>& __y)
+inline bool operator>=(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
 {
   return !(__x < __y);
 }
 
 template<typename _Key, typename _Compare, typename _Alloc>
-inline void swap(set<_Key, _Compare, _Alloc>& __x, set<_Key, _Compare, _Alloc>& __y)
+inline void swap(vset<_Key, _Compare, _Alloc>& __x, vset<_Key, _Compare, _Alloc>& __y)
 {
   __x.swap(__y);
 }

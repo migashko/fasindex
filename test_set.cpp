@@ -1,4 +1,4 @@
-#include <pmi/set.hpp>
+#include <pmi/vset.hpp>
 #include <fas/xtime.hpp>
 #include <climits>
 #include <limits>
@@ -14,7 +14,7 @@
 
 int main(int argc, char* argv[])
 {
-  typedef set<int> set_type;
+  typedef vset<int> set_type;
   typedef set_type::value_compare value_compare;
   typedef set_type::allocator_type allocator_type;
   typedef allocator_type::allocation_manager allocation_manager;
@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
   buffer_type buffer;
   buffer.open("set.bin", MAX_SIZE*4L);
   allocation_manager manager(buffer);
-  set<int> s = set<int>(value_compare(), allocator_type(manager)) ;
+  vset<int> s = vset<int>(value_compare(), allocator_type(manager)) ;
   std::vector<int> vv;
 
   fas::nanospan start = fas::nanotime();
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
   int last = *( s.end() -2 );
   s.erase( s.begin() );
   s.erase( s.end() - 1 );
-  
+
   if ( *s.begin() != first )
   {
     std::cout << first << std::endl;
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
       std::cout << "-->" << *(s.begin() + i) << std::endl;
 
   auto range = s.equal_range(43);
-  
+
   if ( std::distance(range.first, range.second) != 10 )
   {
     //std::cout << *(range.first) << std::endl;
@@ -92,10 +92,10 @@ int main(int argc, char* argv[])
   std::sort(vv.begin(), vv.end());
   std::for_each( s.begin(), s.end(), [&i, &pred, &vv](int v)
   {
-    
+
     std::cout << i << ":" << v << " " << vv[i]<< std::endl;
     i++;
-    
+
     // std::cout << i++ << ":" << v << " "; std::cout.flush(); if ( v < pred || v != vv[i] ) std::cout << "|" <<  std::endl;; pred = v;}
   });
   */
