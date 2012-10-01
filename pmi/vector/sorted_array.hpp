@@ -11,6 +11,8 @@ class sorted_array
   typedef array<T, N> super;
 
 public:
+  using super::erase;
+  using super::insert;
   /*
   enum { dimension = N};
   typedef T value_type;
@@ -182,6 +184,16 @@ public:
   {
     iterator position = std::upper_bound(super::begin(), super::end(), x, _comparator );
     return super::insert(position, n, x);
+  }
+
+  size_type erase( const T& x )
+  {
+    size_type count = 0;
+    std::pair<iterator, iterator> range = std::equal_range(super::begin(), super::end(), x, _comparator );
+    for (;range.first!=range.second;++range.first, ++count)
+      super::erase(range.first);
+    return count;
+    //return super::erase(position);
   }
 
   template <class InputIterator>

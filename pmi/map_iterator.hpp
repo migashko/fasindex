@@ -96,12 +96,12 @@ public:
 
   self& operator += (difference_type n )
   {
-    if ( n >= _itr->second->size() - _pos )
+    if ( n >= static_cast<difference_type>( _itr->second->size() - _pos ) )
     {
       n -= _itr->second->size() - _pos;
       ++_itr;
       
-      while ( n >= _itr->second->size() )
+      while ( n >= static_cast<difference_type>( _itr->second->size() ) )
       {
         n -= _itr->second->size();
         ++_itr;
@@ -120,7 +120,7 @@ public:
       n -= _pos;
       --_itr;
 
-      while ( n >= _itr->second->size() )
+      while ( n >= static_cast<difference_type>( _itr->second->size() ) )
       {
         n -= _itr->second->size();
         --_itr;
@@ -179,6 +179,9 @@ public:
   template<typename TI>
   friend typename map_iterator<TI>::difference_type operator - ( map_iterator<TI> r1, map_iterator<TI> r2 );
 
+
+  tree_iteartor     get_tree_iteartor() const { return _itr;}
+  difference_type   get_position() const { return _pos; } 
 private:
   tree_iteartor _itr;
   difference_type _pos;
@@ -233,7 +236,7 @@ inline typename map_iterator<TI>::difference_type operator -
 {
   
   if ( r1._itr == r2._itr )
-    return  r2._pos - r1._pos;
+    return  r1._pos - r2._pos;
 
   typename map_iterator<TI>::difference_type result = r1._itr->second->size() - r1._pos;
   for ( ++r1; r1!=r2; ++r1 )

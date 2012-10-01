@@ -63,6 +63,7 @@ private:
   typedef helper<_Key, _Compare> help;
   typedef typename help::array_tree_type array_tree_type;
   array_tree_type _tree;
+  size_t _size;
 public:
   typedef typename help::array_type array_type;
 
@@ -74,7 +75,8 @@ public:
 
     // Временное решение
   typedef map_iterator<tree_iteartor> iterator;
-  typedef map_iterator<const_tree_iteartor> const_iterator;
+  typedef const map_iterator<tree_iteartor> const_iterator;
+  //typedef map_iterator<const_tree_iteartor> const_iterator;
 
   typedef std::reverse_iterator<iterator> reverse_iterator;
   typedef const std::reverse_iterator<iterator> const_reverse_iterator;
@@ -83,6 +85,7 @@ public:
     : _comparator()
     , _allocator()
     , _tree()
+    , _size(0)
   {
 
   }
@@ -91,6 +94,7 @@ public:
     : _comparator(comp)
     , _allocator(alloc)
     , _tree()
+    , _size(0)
   {
 
   }
@@ -98,17 +102,20 @@ public:
   template<typename InputIterator>
   set(InputIterator, InputIterator)
   {
+    _size = 0;
     throw not_impl();
   }
 
   template<typename InputIterator>
   set(InputIterator, InputIterator, const value_compare& , const allocator_type&  = allocator_type() )
   {
+    _size = 0;
     throw not_impl();
   }
 
   set(const set& )
   {
+    _size = 0;
     throw not_impl();
   }
 
@@ -116,12 +123,14 @@ public:
 
   set(set&& __x)
   {
+    _size = 0;
     throw not_impl();
     // TODO: : _M_t(std::move(__x._M_t))
   }
 
   set( std::initializer_list<value_type>, const value_compare& = value_compare(), const allocator_type&  = allocator_type())
   {
+    _size = 0;
     throw not_impl();
   }
 
@@ -129,6 +138,7 @@ public:
 
   set&  operator=(const set& __x)
   {
+    _size = 0;
     throw not_impl();
     return *this;
   }
@@ -137,6 +147,7 @@ public:
 
   set& operator=(set&& __x)
   {
+    _size = 0;
     throw not_impl();
   // NB: DR 1204.
   // NB: DR 675.
@@ -157,22 +168,19 @@ public:
 
   // accessors:
 
-  key_compare key_comp() const
+  const key_compare& key_comp() const
   {
-    throw not_impl();
-    return key_compare();
+    return _comparator;
   }
 
-  value_compare value_comp() const
+  const value_compare& value_comp() const
   {
-    throw not_impl();
-    return value_compare();
+    return _comparator;
   }
 
-  allocator_type  get_allocator() const
+  const allocator_type& get_allocator() const
   {
-    throw not_impl();
-    return allocator_type();
+    return _allocator;
   }
 
   iterator  begin()
@@ -197,76 +205,68 @@ public:
 
   reverse_iterator rbegin()
   {
-    throw not_impl();
-    return reverse_iterator();
+    return reverse_iterator( this->end() );
   }
 
   reverse_iterator rend()
   {
-    throw not_impl();
-    return reverse_iterator();
+    return reverse_iterator( this->begin() );
   }
 
   const_reverse_iterator rbegin() const
   {
-    throw not_impl();
-    return const_reverse_iterator();
+    return const_reverse_iterator( this->end() );
   }
 
   const_reverse_iterator rend() const
   {
-    throw not_impl();
-    return const_reverse_iterator();
+    return const_reverse_iterator( this->begin() );
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  iterator  cbegin() const
+  const_iterator  cbegin() const
   {
-    throw not_impl();
-    return iterator();
+    return const_iterator(_tree.begin(), 0);
   }
 
-  iterator cend() const
+  const_iterator cend() const
   {
-    throw not_impl();
-    return iterator();
+    return const_iterator(_tree.end(), 0 );
   }
 
-  reverse_iterator crbegin() const
+  const_reverse_iterator crbegin() const
   {
-    throw not_impl();
-    return reverse_iterator();
+    return const_reverse_iterator( this->end() );
   }
 
   reverse_iterator crend() const
   {
-    throw not_impl();
-    return reverse_iterator();
+    return const_reverse_iterator( this->begin() );
   }
 
 #endif
 
   bool empty() const
   {
-    throw not_impl();
-    return bool();
+    return _size==0;
   }
 
   size_type size() const
   {
-    throw not_impl();
-    return size_type();
+    return _size;
   }
 
   size_type max_size() const
   {
-    throw not_impl();
-    return size_type();
+    return _tree.max_size();
   }
 
-  void swap(set& )
+  void swap( set& s )
   {
-    throw not_impl();
+    std::swap(s._comparator, _comparator);
+    std::swap(s._allocator, _allocator);
+    std::swap(s._tree, _tree);
+    std::swap(s._size, _size);
   }
 
   void check()
@@ -292,6 +292,11 @@ public:
   }
 
   iterator insert(const value_type& value)
+  {
+    return _insert(value);
+  }
+  template<typename VT>
+  iterator _insert(VT& value)
   {
     //1. Находим последний элемент куда будем вставлять
     auto treeitr = _tree.end();
@@ -356,66 +361,79 @@ public:
     //check();
 
     //if ( !flag ) abort();
-    
+    ++_size;
     return iterator( treeitr, std::distance(treeitr->second->begin(), aitr) );
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-  std::pair<iterator, bool> insert(value_type&& )
+  iterator insert(value_type&& value)
   {
-    throw not_impl();
+    return this->_insert(value);
+    //throw not_impl();
     /*
     std::pair<typename _Rep_type::iterator, bool> __p = _M_t._M_insert_unique(std::move(__x));
     return std::pair<iterator, bool>(__p.first, __p.second);
     */
-    return std::pair<iterator, bool>();
+    //return std::pair<iterator, bool>();
   }
 #endif
 
-  iterator  insert(const_iterator , const value_type&)
+  iterator  insert(const_iterator, const value_type& value)
   {
-    throw not_impl();
+    // TDOD: оптимизировать
+    return this->_insert(value);
+    /*throw not_impl();
     return iterator();
+    */
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  iterator insert(const_iterator , value_type&& )
+  iterator insert(const_iterator, value_type&& value)
   {
-    throw not_impl();
-    return iterator();
+    // TDOD: оптимизировать
+    // return insert( std::move(value) );
+    return this->_insert(value);
   }
 #endif
 
   template<typename InputIterator>
-  void insert(InputIterator, InputIterator)
+  void insert(InputIterator beg, InputIterator end)
   {
-    throw not_impl();
+    std::for_each(beg, end, [this](const value_type& value){ this->insert(value);} );
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
   void insert( std::initializer_list<value_type> lst)
   {
-    throw not_impl();
-    this->insert(lst.begin(), lst.end());
+    this->insert( lst.begin(), lst.end() );
   }
 
 #endif
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-  iterator erase(const_iterator )
+  /*iterator*/void erase(const_iterator itr)
   {
-    throw not_impl();
-    return iterator();
+    auto arrayptr = itr.get_tree_iteartor()->second;
+    arrayptr->erase( arrayptr->begin() + itr.get_position());
+    //(*(itr.get_tree_iteartor()->second)).erase(10)/*(*itr)*/;
+    //throw not_impl();
+    /*(*itr)->second.erase( itr.get_position() );
+    if ( itr->empty() )
+      _tree->erase(itr);
+    */
+    // throw not_impl();
+    //return iterator();
   }
 
 #else
 
   void  erase(iterator)
   {
-    throw not_impl();
+    auto arrayptr = itr.get_tree_iteartor()->second;
+    arrayptr->erase( arrayptr->begin() + itr.get_position());
   }
 
 #endif
@@ -428,18 +446,21 @@ public:
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-  iterator erase(const_iterator , const_iterator )
+  /*iterator*/void erase(const_iterator first, const_iterator last)
   {
-    throw not_impl();
-    return iterator();
+    for (;first!=last; ++first)
+      this->erase(first);
+    // throw not_impl();
+   // return iterator();
   }
 
 #else
 
 
-  void erase(iterator , iterator)
+  void erase(iterator first, iterator first)
   {
-    throw not_impl();
+    for (;first!=last; ++first)
+      this->erase(first);
   }
 
 #endif
@@ -458,49 +479,96 @@ public:
   iterator find(const key_type&)
   {
     throw not_impl();
-    return iterator();
+    // return iterator();
   }
 
   const_iterator find(const key_type& ) const
   {
     throw not_impl();
-    return const_iterator();
+    // return const_iterator();
   }
 
-  iterator lower_bound(const key_type& )
+  iterator lower_bound(const key_type& key)
   {
-    throw not_impl();
-    return iterator();
+    auto treeitr = _tree.lower_bound(key);
+    //std::cout << "lower_bound 1 key=" << key << " first=" << (_tree.begin() + 1)->first << std::endl;
+    if ( treeitr == _tree.end() )
+      treeitr = _tree.begin();
+    std::cout << "lower_bound 1 key=" << key << " first=" << treeitr->first << std::endl;
+      //return this->end();
+    std::cout << "lower_bound 2 " << treeitr->second->empty() << std::endl;
+    auto arrayitr = std::lower_bound( treeitr->second->begin(), treeitr->second->end(), key, _comparator );
+    std::cout << "lower_bound 2.1"<< std::endl;
+    if ( arrayitr == treeitr->second->end() )
+    {
+      std::cout << "lower_bound fail"<< std::endl;
+      for (auto itr = treeitr->second->begin(); itr!=treeitr->second->end(); ++itr )
+      {
+        std::cout << ":::" << *itr << std::endl;
+      }
+      return this->end();
+    }
+    std::cout << "lower_bound 3"<< std::endl;
+    std::cout << "lower_bound: " << std::distance(treeitr->second->begin(), arrayitr) << std::endl;
+    return iterator(treeitr, std::distance(treeitr->second->begin(), arrayitr));
   }
 
-  const_iterator lower_bound(const key_type& ) const
+  const_iterator lower_bound(const key_type& key) const
   {
-    throw not_impl();
-    return const_iterator();
+    auto treeitr = _tree.lower_bound(key);
+    if ( treeitr == _tree.end() )
+      return this->end();
+    auto arrayitr = std::lower_bound( treeitr->second->begin(), treeitr->second->end(), key, _comparator );
+    if ( arrayitr == treeitr->second->end() )
+      return this->end();
+    std::cout << "lower_bound: " << std::distance(treeitr->second->begin(), arrayitr) << std::endl;
+    return iterator(treeitr, std::distance(treeitr->second->begin(), arrayitr));
   }
 
-  iterator upper_bound(const key_type& )
+  iterator upper_bound(const key_type& key)
   {
-    throw not_impl();
-    return iterator();
+    if ( _tree.empty() )
+      return this->end();
+    
+    auto treeitr = _tree.upper_bound(key);
+    
+    if ( treeitr != _tree.begin() )
+      --treeitr;
+    
+    auto arrayitr = std::upper_bound( treeitr->second->begin(), treeitr->second->end(), key, _comparator );
+    
+    return iterator(treeitr, std::distance(treeitr->second->begin(), arrayitr) );
   }
 
-  const_iterator upper_bound(const key_type& ) const
+  const_iterator upper_bound(const key_type& key) const
   {
-    throw not_impl();
-    return const_iterator();
+    if ( _tree.empty() )
+      return this->end();
+
+    auto treeitr = _tree.upper_bound(key);
+
+    if ( treeitr == _tree.begin() )
+      --treeitr;
+
+    auto arrayitr = std::upper_bound( treeitr->second->begin(), treeitr->second->end(), key, _comparator );
+
+    return const_iterator(treeitr, std::distance(treeitr->second->begin(), arrayitr) );
   }
 
-  std::pair<iterator, iterator> equal_range(const key_type&)
+  std::pair<iterator, iterator> equal_range(const key_type& x)
   {
-    throw not_impl();
-    return std::pair<iterator, iterator>();
+    return std::make_pair(
+      this->lower_bound(x),
+      this->upper_bound(x)
+    );
   }
 
-  std::pair<const_iterator, const_iterator> equal_range(const key_type& __x) const
+  std::pair<const_iterator, const_iterator> equal_range(const key_type& x) const
   {
-    throw not_impl();
-    return std::pair<const_iterator, const_iterator>();
+    return std::make_pair(
+      this->lower_bound(x),
+      this->upper_bound(x)
+    );
   }
 
 
