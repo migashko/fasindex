@@ -57,7 +57,12 @@ struct allocator
     //if (num!=1) throw;
     _mmm->deallocate(p, num);
   }
-    
+
+/// non-standart, для востановления
+  allocation_manager* operator-> ()
+  {
+    return _mmm;
+  }
   
 private:
   allocation_manager* _mmm;

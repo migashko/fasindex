@@ -12,6 +12,13 @@
 #define COUNT 100L
 #define MAX_SIZE 4L
 
+
+
+
+
+
+
+
 int main(int argc, char* argv[])
 {
   typedef vset<int> set_type;
@@ -22,6 +29,7 @@ int main(int argc, char* argv[])
 
   buffer_type buffer;
   buffer.open("set.bin", MAX_SIZE*4L);
+  buffer.clear();
   allocation_manager manager(buffer);
   vset<int> s = vset<int>(value_compare(), allocator_type(manager)) ;
   std::vector<int> vv;

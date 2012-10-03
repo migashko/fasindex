@@ -10,6 +10,27 @@
 #include <pmi/vset_iterator.hpp>
 #include <pmi/sorted_array.hpp>
 
+template<typename S, typename VT>
+inline void restore(S& s, std::allocator<VT>)
+{
+  std::cout << "inline void restore(S& s, std::allocator<VT>)" << std::endl;
+}
+
+template<typename S, typename VT, typename CM>
+inline void restore(S& s, allocator<VT, CM> a)
+{
+  std::cout << "inline void restore(S& s, allocator<VT, CM> a)" << std::endl;
+  auto beg = a->begin();
+  auto end = a->end();
+  for (;beg!=end;++beg)
+  {
+    std::cout << "restore: size="<< beg->size() << " [0]=" << beg->at(0) << std::endl;
+    s._tree.insert( std::make_pair(beg->at(0), beg) );
+    s._size += beg->size();
+  }
+    
+}
+
 struct not_impl: std::exception {};
 
 template<
@@ -19,7 +40,6 @@ template<
 struct helper
 {
   typedef sorted_array<_Key, 1024, _Compare> array_type;
-  //typedef array_tree< array_type, _Key, _Compare > array_tree_type;
   typedef allocator< array_type, chain_memory<array_type, mmap_buffer> > allocator_type;
   typedef std::multimap< _Key,  typename allocator_type::pointer, _Compare > array_tree_type;
 };
@@ -29,16 +49,11 @@ template<
   typename _Key,
   typename _Compare = std::less<_Key>,
   typename _Alloc = typename helper<_Key, _Compare>::allocator_type
-  //typename _Alloc = std::allocator< sorted_array<_Key, 1024, _Compare> >
 >
 class vset
 {
-  /*
-  typedef sorted_array<_Key, 1024, _Compare> array_type;
-  typedef array_tree< array_type > array_tree_type;
-  typedef allocator< chain_memory<array_type>, mmap_buffer > allocator_type;
-  */
-
+  typedef vset<_Key, _Compare, _Alloc > self;
+  friend void restore<>(self&, _Alloc);
 public:
   typedef _Key     key_type;
   typedef _Key     value_type;
@@ -58,14 +73,19 @@ public:
   typedef typename allocator_type::difference_type     difference_type;
 
 private:
+  
   value_compare _comparator;
   allocator_type _allocator;
-  typedef helper<_Key, _Compare> help;
-  typedef typename help::array_tree_type array_tree_type;
+  //typedef helper<_Key, _Compare> help;
+  // typedef typename help::array_tree_type array_tree_type;
+  typedef std::multimap< _Key,  typename allocator_type::pointer, _Compare > array_tree_type;
   array_tree_type _tree;
   size_t _size;
+  
 public:
-  typedef typename help::array_type array_type;
+  
+  // typedef typename help::array_type array_type;
+  typedef typename allocator_type::value_type array_type;
 
   typedef typename array_type::iterator array_iterator;
   typedef typename array_type::const_iterator array_const_iterator;
@@ -74,12 +94,14 @@ public:
   typedef typename array_tree_type::const_iterator const_tree_iteartor;
 
     // Временное решение
-  typedef vset_iterator<tree_iteartor> iterator;
-  typedef const vset_iterator<tree_iteartor> const_iterator;
-  //typedef map_iterator<const_tree_iteartor> const_iterator;
+  typedef vset_iterator<tree_iteartor, value_type> iterator;
+  //typedef vset_iterator<tree_iteartor> const_iterator;
+  //typedef vset_iterator<const tree_iteartor> const_iterator;
+  typedef vset_iterator<const_tree_iteartor, const value_type> const_iterator;
 
   typedef std::reverse_iterator<iterator> reverse_iterator;
-  typedef const std::reverse_iterator<iterator> const_reverse_iterator;
+  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+  //typedef std::reverse_iterator<const iterator> const_reverse_iterator;
 
   vset()
     : _comparator()
@@ -96,25 +118,33 @@ public:
     , _tree()
     , _size(0)
   {
-
+    restore(*this, _allocator);
   }
 
   template<typename InputIterator>
-  vset(InputIterator, InputIterator)
+  vset(InputIterator beg, InputIterator end)
+    : _comparator()
+    , _allocator()
+    , _tree()
+    , _size(0)
   {
-    _size = 0;
-    throw not_impl();
+    this->insert(beg, end);
   }
 
   template<typename InputIterator>
-  vset(InputIterator, InputIterator, const value_compare& , const allocator_type&  = allocator_type() )
+  vset(InputIterator beg, InputIterator end, const value_compare& comp, const allocator_type&  alloc= allocator_type() )
+    : _comparator(comp)
+    , _allocator(alloc)
+    , _tree()
+    , _size(0)
   {
-    _size = 0;
-    throw not_impl();
+    restore(_allocator);
+    this->insert(beg, end);
   }
 
   vset(const vset& )
   {
+    // Запретить копирование если работаем с файлом
     _size = 0;
     throw not_impl();
   }
@@ -128,10 +158,13 @@ public:
     // TODO: : _M_t(std::move(__x._M_t))
   }
 
-  vset( std::initializer_list<value_type>, const value_compare& = value_compare(), const allocator_type&  = allocator_type())
+  vset( std::initializer_list<value_type> il, const value_compare& comp= value_compare(), const allocator_type&  alloc= allocator_type())
+    : _comparator(comp)
+    , _allocator(alloc)
+    , _tree()
+    , _size(0)
   {
-    _size = 0;
-    throw not_impl();
+    this->insert( il.begin(), il.end() );
   }
 
 #endif
@@ -156,12 +189,11 @@ public:
     return *this;
   }
 
-  vset& operator=( std::initializer_list<value_type> )
+  vset& operator=( std::initializer_list<value_type> il)
   {
-    throw not_impl();
-    /*this->clear();
-    this->insert(__l.begin(), __l.end());
-    */
+    std::cout << "vset& operator=( std::initializer_list<value_type> il)" <<std::endl;
+    this->clear();
+    this->insert( il.begin(), il.end() );
     return *this;
   }
 #endif
@@ -226,7 +258,7 @@ public:
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
   const_iterator  cbegin() const
   {
-    return const_iterator(_tree.begin(), 0);
+    return const_iterator(_tree.cbegin(), 0);
   }
 
   const_iterator cend() const
@@ -269,7 +301,7 @@ public:
     std::swap(s._size, _size);
   }
 
-  void check()
+  bool check()
   {
     int current = 0;
     std::cout << "================= check =====================" << std::endl;
@@ -289,6 +321,7 @@ public:
     });
     std::cout << std::endl;
     std::cout << "================= end check =====================" << std::endl;
+    return true;
   }
 
   iterator insert(const value_type& value)
@@ -323,6 +356,7 @@ public:
     {
       // Новый массив
       array_pointer arr = _allocator.allocate(1);
+      _allocator.construct(arr, array_type() );
       aitr = arr->insert(value);
       treeitr = _tree.insert( std::make_pair( value, arr) );
     }
@@ -414,18 +448,16 @@ public:
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-  /*iterator*/void erase(const_iterator itr)
+  void erase(const_iterator itr)
   {
     auto arrayptr = itr.get_tree_iteartor()->second;
     arrayptr->erase( arrayptr->begin() + itr.get_position());
-    //(*(itr.get_tree_iteartor()->second)).erase(10)/*(*itr)*/;
-    //throw not_impl();
-    /*(*itr)->second.erase( itr.get_position() );
-    if ( itr->empty() )
-      _tree->erase(itr);
-    */
-    // throw not_impl();
-    //return iterator();
+    if ( arrayptr->empty() )
+    {
+      _allocator.deallocate(arrayptr, 1);
+      _tree.erase(itr.get_tree_iteartor());
+    }
+    --_size;
   }
 
 #else
@@ -434,46 +466,56 @@ public:
   {
     auto arrayptr = itr.get_tree_iteartor()->second;
     arrayptr->erase( arrayptr->begin() + itr.get_position());
+    if ( arrayptr->empty() )
+    {
+      _allocator.deallocate(arrayptr);
+      _tree.erase(itr.get_tree_iteartor());
+    }
+    --_size;
   }
 
 #endif
 
-  size_type erase(const key_type& )
+  size_type erase(const key_type& key)
   {
-    throw not_impl();
-    return size_type();
+    auto range = this->equal_range(key);
+    return this->erase(range.first, range.second);
+
   }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 
-  /*iterator*/void erase(const_iterator first, const_iterator last)
+  size_type erase(const_iterator first, const_iterator last)
   {
-    for (;first!=last; ++first)
+    // TODO: оптимизировать
+    size_type count = 0;
+    for (;first!=last; ++first, ++count)
       this->erase(first);
-    // throw not_impl();
-   // return iterator();
+    return count;
   }
 
 #else
 
-
   void erase(iterator first, iterator first)
   {
-    for (;first!=last; ++first)
+    // TODO: оптимизировать
+    size_type count = 0;
+    for (;first!=last; ++first, ++count)
       this->erase(first);
+    return count;
   }
 
 #endif
 
   void clear()
   {
-    throw not_impl();
+    this->erase( this->begin(), this->end() );
   }
 
-  size_type count(const key_type& ) const
+  size_type count(const key_type& key) const
   {
-    throw not_impl();
-    return size_type();
+    auto range = this->equal_range(key);
+    return std::distance(range.first, range.second);
   }
 
   iterator find(const key_type& key)

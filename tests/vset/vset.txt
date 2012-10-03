@@ -1,0 +1,142 @@
+  vset()
+  explicit vset(const value_compare& comp,const allocator_type& alloc = allocator_type() )
+
+  template<typename InputIterator>
+  vset(InputIterator, InputIterator)
+
+  template<typename InputIterator>
+  vset(InputIterator, InputIterator, const value_compare& , const allocator_type&  = allocator_type() )
+
+  vset(const vset& )
+
+  vset(vset&& __x)
+
+  vset( std::initializer_list<value_type>, const value_compare& = value_compare(), const allocator_type&  = allocator_type())
+
+  vset&  operator=(const vset& __x)
+
+  vset& operator=(vset&& __x)
+
+  vset& operator=( std::initializer_list<value_type> )
+
+
+-------------------------------------------------------------------------------------------
+
+  const key_compare& key_comp() const
+
+  const value_compare& value_comp() const
+
+  const allocator_type& get_allocator() const
+
+  iterator  begin()
+
+  iterator end()
+
+  const_iterator  begin() const
+
+  const_iterator end() const
+
+  reverse_iterator rbegin()
+
+  reverse_iterator rend()
+
+  const_reverse_iterator rbegin() const
+
+  const_reverse_iterator rend() const
+
+  const_iterator  cbegin() const
+
+  const_iterator cend() const
+
+  const_reverse_iterator crbegin() const
+
+  reverse_iterator crend() const
+
+  bool empty() const
+
+  size_type size() const
+
+  size_type max_size() const
+
+  void swap( vset& s )
+
+---------------------------------------------------------------------------------
+
+  iterator insert(const value_type& value)
+
+  iterator insert(value_type&& value)
+
+  iterator  insert(const_iterator, const value_type& value)
+
+  iterator insert(const_iterator, value_type&& value)
+
+  template<typename InputIterator>
+  void insert(InputIterator beg, InputIterator end)
+
+  void insert( std::initializer_list<value_type> lst)
+
+----------------------
+
+  void erase(const_iterator itr)
+
+  void erase(iterator)
+
+  size_type erase(const key_type& key)
+
+  size_type erase(const_iterator first, const_iterator last)
+
+  void erase(iterator first, iterator first)
+
+--- ----------------------------------
+
+  void clear()
+
+  size_type count(const key_type& ) const
+
+  iterator find(const key_type& key)
+
+  const_iterator find(const key_type& key ) const
+
+  iterator lower_bound(const key_type& key)
+
+  const_iterator lower_bound(const key_type& key) const
+
+  iterator upper_bound(const key_type& key)
+
+  const_iterator upper_bound(const key_type& key) const
+
+  std::pair<iterator, iterator> equal_range(const key_type& x)
+
+  std::pair<const_iterator, const_iterator> equal_range(const key_type& x) const
+
+  template<typename _K1, typename _C1, typename _A1>
+  friend bool operator==(const vset<_K1, _C1, _A1>&, const vset<_K1, _C1, _A1>&);
+
+  template<typename _K1, typename _C1, typename _A1>
+  friend bool operator<(const vset<_K1, _C1, _A1>&, const vset<_K1, _C1, _A1>&);
+
+};
+
+template<typename _Key, typename _Compare, typename _Alloc>
+inline bool operator==(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
+
+template<typename _Key, typename _Compare, typename _Alloc>
+inline bool operator< (const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
+
+template<typename _Key, typename _Compare, typename _Alloc>
+inline bool
+operator!=(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
+
+template<typename _Key, typename _Compare, typename _Alloc>
+inline bool operator>(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
+
+template<typename _Key, typename _Compare, typename _Alloc>
+inline bool operator<=(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
+
+template<typename _Key, typename _Compare, typename _Alloc>
+inline bool operator>=(const vset<_Key, _Compare, _Alloc>& __x, const vset<_Key, _Compare, _Alloc>& __y)
+
+template<typename _Key, typename _Compare, typename _Alloc>
+inline void swap(vset<_Key, _Compare, _Alloc>& __x, vset<_Key, _Compare, _Alloc>& __y)
+
+#endif

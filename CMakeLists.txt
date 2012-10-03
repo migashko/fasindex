@@ -16,3 +16,5 @@ target_link_libraries(test_set rt)
 #target_link_libraries(test_vector rt)
 #target_link_libraries(test_sorted_vector rt)
 #target_link_libraries(test_hitlist rt)
+
+add_subdirectory(tests)
