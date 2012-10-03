@@ -35,6 +35,57 @@ struct not_impl: std::exception {};
 
 template<
   typename _Key,
+  typename _Compare,
+  typename _Alloc
+>
+class vset;
+
+struct alloc_type
+{
+  typedef enum {
+    inmemmory,
+    persistent
+  } type;
+};
+
+template<
+  typename _Key,
+  typename _Compare = std::less<_Key>,
+  alloc_type::type AllocType = alloc_type::persistent,
+  size_t ArraySize = 1024
+>
+struct vset_helper;
+
+template<
+  typename _Key,
+  typename _Compare,
+  size_t ArraySize
+>
+struct vset_helper<_Key, _Compare, alloc_type::persistent, ArraySize >
+{
+  typedef sorted_array<_Key, ArraySize, _Compare> array_type;
+  typedef mmap_buffer buffer_type;
+  typedef chain_memory<array_type, buffer_type> memory_manager;
+  typedef allocator< array_type, memory_manager > allocator_type;
+  typedef vset<_Key, _Compare, allocator_type> vset_type;
+};
+
+template<
+  typename _Key,
+  typename _Compare,
+  size_t ArraySize
+>
+struct vset_helper<_Key, _Compare, alloc_type::inmemmory, ArraySize >
+{
+  // typedef vset<int, std::less<int>, std::allocator< sorted_array<int, 1024, std::less<int> > > > set_type;
+  typedef sorted_array<_Key, ArraySize, _Compare> array_type;
+  typedef std::allocator< array_type > allocator_type;
+  typedef vset<_Key, _Compare, allocator_type> vset_type;
+};
+
+/*
+template<
+  typename _Key,
   typename _Compare = std::less<_Key>
 >
 struct helper
@@ -43,12 +94,13 @@ struct helper
   typedef allocator< array_type, chain_memory<array_type, mmap_buffer> > allocator_type;
   typedef std::multimap< _Key,  typename allocator_type::pointer, _Compare > array_tree_type;
 };
+*/
 
 
 template<
   typename _Key,
   typename _Compare = std::less<_Key>,
-  typename _Alloc = typename helper<_Key, _Compare>::allocator_type
+  typename _Alloc = typename vset_helper<_Key, _Compare>::allocator_type
 >
 class vset
 {
