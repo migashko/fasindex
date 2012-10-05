@@ -1,9 +1,11 @@
 #ifndef MANAGED_ALLOCATOR_HPP
 #define MANAGED_ALLOCATOR_HPP
 
-#include <limits>
 #include <pmi/buffer/mmap_buffer.hpp>
 #include <pmi/memory/chain_memory.hpp>
+#include <limits>
+#include <cassert>
+
 
 template<typename T, typename MemoryManager /* = chain_memory<T, mmap_buffer> */ >
 struct allocator
@@ -30,15 +32,26 @@ struct allocator
     typedef allocator<U, MemoryManager> other;
   };
 
-  pointer address (reference value ) const { return static_cast<char*>(&value) - _mmm.addr() ; }
+  pointer address(reference value ) const
+  {
+    assert(_mmm!=0);
+    return static_cast<char*>(&value) - _mmm->addr() ;
+  }
 
-  const_pointer address (const_reference value) const { return static_cast<char*>(&value) - _mmm.addr() ; }
+  const_pointer address (const_reference value) const
+  {
+    assert(_mmm!=0);
+    return static_cast<char*>(&value) - _mmm->addr();
+  }
   
-  size_type max_size () const throw() { return ::std::numeric_limits <size_type>::max() / sizeof(T); }
+  size_type max_size () const throw()
+  {
+    return ::std::numeric_limits <size_type>::max() / sizeof(T);
+  }
 
   pointer allocate (size_type num, void *  hint = 0)
   {
-    //if (num!=1) throw;
+    assert(_mmm!=0);
     return _mmm->allocate(num, hint);
   }
 
@@ -54,17 +67,26 @@ struct allocator
 
   void deallocate (pointer p, size_type num)
   {
-    //if (num!=1) throw;
+    assert(_mmm!=0);
     _mmm->deallocate(p, num);
   }
 
 /// non-standart, для востановления
+
   allocation_manager* operator-> ()
   {
+    assert(_mmm!=0);
     return _mmm;
+  }
+
+  void set_manager( allocation_manager* mm)
+  {
+    _mmm = mm;
   }
   
 private:
+
+  
   allocation_manager* _mmm;
 };
 

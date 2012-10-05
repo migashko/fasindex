@@ -98,6 +98,7 @@ public:
     ++_pos;
     if ( _itr->second->size() == static_cast<size_t>(_pos))
     {
+
       ++_itr;
       _pos = 0;
     }
@@ -278,14 +279,21 @@ inline typename vset_iterator<TI, VT>::difference_type operator -
     vset_iterator<TI, VT> r2
   )
 {
-
   if ( r1._itr == r2._itr )
     return  r1._pos - r2._pos;
 
-  typename vset_iterator<TI, VT>::difference_type result = r1._itr->second->size() - r1._pos;
-  for ( ++r1; r1!=r2; ++r1 )
-    result += r1._itr->second->size();
+  typedef typename vset_iterator<TI, VT>::tree_iteartor tree_iteartor;
+  tree_iteartor titr = r2._itr;
+  typename vset_iterator<TI, VT>::difference_type result = titr->second->size() - r2._pos;
+  //std::cout << "result-1: " << result << ": " << r2._itr->second->size() << std::endl;
+  for ( ++titr; titr!=r1._itr; ++titr )
+  {
+    result += titr->second->size();
+    // std::cout << "result-2: " << result  << ": " << r2._itr->second->size() << std::endl;
+  }
+
   result += r1._pos;
+  //std::cout << "result-3: " << result <<  std::endl;
 
   return result;
 
