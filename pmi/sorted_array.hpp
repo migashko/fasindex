@@ -12,7 +12,7 @@ class sorted_array
 
 public:
   using super::erase;
-  using super::insert;
+  // using super::insert;
   /*
   enum { dimension = N};
   typedef T value_type;
@@ -53,9 +53,9 @@ public:
   typedef std::ptrdiff_t difference_type;
 
 
-  sorted_array( value_compare cmp = value_compare() )
+  sorted_array( /*value_compare cmp = value_compare()*/ )
     : super()
-    , _comparator(cmp)
+    // , _comparator(cmp)
   {};
 
   /*
@@ -105,10 +105,10 @@ public:
   }
   */
 
-  void resize ( size_type sz, T value = value_type() )
+  void resize ( size_type sz, T value = value_type(), const value_compare& comp = value_compare() )
   {
     super::resize(sz, value);
-    this->sort();
+    this->sort(comp);
   }
 
   /*
@@ -150,10 +150,10 @@ public:
   */
 
   template <class InputIterator>
-  void assign( InputIterator first, InputIterator last )
+  void assign( InputIterator first, InputIterator last, const value_compare& comp = value_compare() )
   {
     super::assign(first, last);
-    this->sort();
+    this->sort(comp);
   }
 
   /*
@@ -168,28 +168,28 @@ public:
   }
   */
 
-  void push_back ( const T& x )
+  void push_back ( const T& x, const value_compare& comp = value_compare() )
   {
     super::push_back(x);
-    this->sort();
+    this->sort(comp);
   }
 
-  iterator insert ( const T& x )
+  iterator insert ( const T& x, const value_compare& comp = value_compare() )
   {
-    iterator position = std::upper_bound(super::begin(), super::end(), x, _comparator );
+    iterator position = std::upper_bound(super::begin(), super::end(), x, comp );
     return super::insert(position, x);
   }
 
-  void insert ( size_type n, const T& x )
+  void insert ( size_type n, const T& x, const value_compare& comp = value_compare() )
   {
-    iterator position = std::upper_bound(super::begin(), super::end(), x, _comparator );
+    iterator position = std::upper_bound(super::begin(), super::end(), x, comp );
     return super::insert(position, n, x);
   }
 
-  size_type erase( const T& x )
+  size_type erase( const T& x, const value_compare& comp = value_compare() )
   {
     size_type count = 0;
-    std::pair<iterator, iterator> range = std::equal_range(super::begin(), super::end(), x, _comparator );
+    std::pair<iterator, iterator> range = std::equal_range(super::begin(), super::end(), x, comp );
     for (;range.first!=range.second;++range.first, ++count)
       super::erase(range.first);
     return count;
@@ -197,15 +197,15 @@ public:
   }
 
   template <class InputIterator>
-  void insert ( InputIterator first, InputIterator last )
+  void insert ( InputIterator first, InputIterator last, const value_compare& comp = value_compare() )
   {
     super::insert( super::end(), first, last );
-    this->sort();
+    this->sort(comp);
   }
 
-  void sort()
+  void sort(const value_compare& comp = value_compare())
   {
-    std::sort( super::begin(), super::end(), _comparator );
+    std::sort( super::begin(), super::end(), comp );
   }
 
   /*
@@ -220,7 +220,7 @@ public:
   }*/
 
 private:
-  value_compare _comparator;
+  // value_compare _comparator;
 };
 
 /*

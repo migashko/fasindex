@@ -547,7 +547,7 @@ public:
     
       array_pointer arr = _allocator.allocate(1);
       _allocator.construct(arr, array_type() );
-      aitr = arr->insert(value);
+      aitr = arr->insert(value, _comparator);
       treeitr = _tree.insert( std::make_pair( std::make_pair(value, value), arr) );
     }
     else
@@ -566,9 +566,9 @@ public:
           */
 
         
-        arr2->assign( arr1->begin() + offset, arr1->end() );
+        arr2->assign( arr1->begin() + offset, arr1->end(), _comparator );
         
-        arr1->resize( offset );
+        arr1->resize( offset, value_type(),  _comparator );
         
         _tree.insert( treeitr, std::make_pair( std::make_pair( arr1->front(), arr1->back() ), arr1) );
         _tree.insert( treeitr, std::make_pair( std::make_pair( arr2->front(), arr2->back() ), arr2) );
@@ -578,7 +578,7 @@ public:
       }
       else
       {
-        aitr = treeitr->second->insert(value);
+        aitr = treeitr->second->insert(value, _comparator);
         treeitr = _re_node(treeitr);
         /*
         if ( _comparator(value, treeitr->first.first) || _comparator(treeitr->first.second, value) )
@@ -748,7 +748,7 @@ public:
     // Не можем работать с const_iterator т.к. перекидываем данные
     auto treeitr = itr.get_tree_iteartor();
     auto arrayptr = treeitr->second;
-    arrayptr->erase( arrayptr->begin() + itr.get_position());
+    arrayptr->erase( arrayptr->begin() + itr.get_position() );
     if ( arrayptr->empty() )
     {
       _tree.erase(treeitr);
