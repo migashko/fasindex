@@ -190,9 +190,7 @@ public:
     , _allocator()
     , _tree( tree_key_compare(_comparator) )
     , _size(0)
-  {
-
-  }
+  {}
 
   explicit vset(const value_compare& comp,const allocator_type& alloc = allocator_type() )
     : _comparator(comp)
@@ -266,8 +264,8 @@ public:
     throw not_impl();
   // NB: DR 1204.
   // NB: DR 675.
-//  this->clear();
-//  this->swap(__x);
+  //  this->clear();
+  //  this->swap(__x);
     return *this;
   }
 
