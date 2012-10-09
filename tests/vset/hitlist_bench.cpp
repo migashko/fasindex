@@ -6,9 +6,9 @@
 
 #include <set>
 
-#define MAX_BUFFER (1024L)
-#define COUNT 1000000L
-#define MAX_SIZE (COUNT*200)
+#define MAX_BUFFER (1024L/**1024L*1024L*/)
+#define COUNT 100000L
+#define MAX_SIZE (200000000L)
 #define MAX_SIZE_ERASE (MAX_SIZE - MAX_SIZE/10 )
 
 
@@ -73,8 +73,8 @@ struct comparator:
     assert(_container!=0);
     
     return Compare::operator()(
-      *(reinterpret_cast<const T*>( _container->addr() + f) ),
-      *(reinterpret_cast<const T*>( _container->addr() + s) )
+      *(reinterpret_cast<const T*>( /*_container->addr() + */f) ),
+      *(reinterpret_cast<const T*>( /*_container->addr() + */ s) )
     );
   }
 };
@@ -99,9 +99,11 @@ dst_by_time_index* _dst_by_time;
 dst_by_type_index* _dst_by_type;
 src_by_time_index* _src_by_time;
 
+
 dst_by_time_helper::buffer_type *_dst_by_time_buffer;
 dst_by_type_helper::buffer_type *_dst_by_type_buffer;
 dst_by_type_helper::buffer_type *_src_by_time_buffer;
+
 
 template<typename C>
 size_t overage(const C& c)
@@ -109,41 +111,6 @@ size_t overage(const C& c)
   if (c.empty() || c.capacity() == c.size() )
     return 0;
   return (c.capacity() * 100 / c.size() ) - 100;
-}
-
-template<typename C, typename B>
-void test_container(C& cont, B& buffer, std::string head)
-{
-  std::cout << std::endl << std::endl << "+++++++++++++++++++++++++++++++++++++++++" << std::endl;
-  std::cout << head << std::endl;
-  fas::nanospan start = fas::process_nanotime();
-  fas::nanospan finish = start;
-
-  for (int i =0 ; i < MAX_SIZE; i++ )
-  {
-    if ( i % COUNT == 0 )
-    {
-      finish = fas::process_nanotime();
-      std::cout << "(" << finish - start << ") " << i / COUNT << " млн : " << finish - start  << ", " << COUNT * fas::rate(finish - start) << " persec" << std::endl;
-      //buffer.sync(false);
-      start = finish;
-      _dst_by_time_buffer->sync(false);
-      _dst_by_type_buffer->sync(false);
-      _src_by_time_buffer->sync(false);
-      finish = fas::process_nanotime();
-      std::cout << "(" << finish - start << ") " << i / COUNT << " млн : " << finish - start  << ", " << COUNT * fas::rate(finish - start) << " persec" << std::endl;
-      start = finish;
-      std::cout << "size1: " << _dst_by_time->size() << std::endl;
-      std::cout << "capacity1: " << _dst_by_time->capacity() << std::endl;
-      std::cout << "overage1: " << overage(*_dst_by_time) << "%" << std::endl;
-    }
-
-    int value = i*(std::rand() * std::rand() )  % INT_MAX;
-    cont.insert(value);
-  }
-
-  finish = fas::process_nanotime();
-  std::cout << "-----------------------------------------" << std::endl;
 }
 
 void test_hitlist()
@@ -161,26 +128,38 @@ void test_hitlist()
     if ( i % COUNT == 0 )
     {
       finish = fas::nanotime();
-      std::cout << "(" << finish - start << ") " << i / COUNT << " млн : " << finish - start  << ", " << COUNT * fas::rate(finish - start) << " persec" << std::endl;
+      std::cout << "(" << start << "," <<  finish - start << ") " << i / 1000000 << " млн : " << finish - start  << ", " << COUNT * fas::rate(finish - start) << " persec" << std::endl;
       start = finish;
-      _dst_by_time_buffer->sync(false);
-      _dst_by_type_buffer->sync(false);
-      _src_by_time_buffer->sync(false);
-      finish = fas::nanotime();
-      std::cout << "(" << finish - start << ") " << i / COUNT << " млн : " << finish - start  << ", " << COUNT * fas::rate(finish - start) << " persec" << std::endl;
-      start = finish;
+      if ( i % (COUNT*10) == 0 )
+      {
+        
+        _dst_by_time_buffer->sync(false);
+        _dst_by_type_buffer->sync(false);
+        _src_by_time_buffer->sync(false);
+        
+        finish = fas::nanotime();
+        std::cout << "(" << finish - start << ") " << i / 1000000 << " млн : " << finish - start  << ", " << COUNT * fas::rate(finish - start) << " persec" << std::endl;
+        start = finish;
       //std::cout << "main size: " << _main->size() << std::endl;
-      std::cout << "size1: " << _dst_by_time->size() << std::endl;
-      std::cout << "capacity1: " << _dst_by_time->capacity() << std::endl;
-      std::cout << "overage1: " << overage(*_dst_by_time) << "%" << std::endl;
-      std::cout << "size2: " << _dst_by_type->size() << std::endl;
-      std::cout << "capacity2: " << _dst_by_type->capacity() << std::endl;
-      std::cout << "overage2: " << overage(*_dst_by_type) << "%" << std::endl;
-      std::cout << "size3: " << _src_by_time->size() << std::endl;
-      std::cout << "capacity3: " << _src_by_time->capacity() << std::endl;
-      std::cout << "overage3: " << overage(*_src_by_time) << "%" << std::endl;
-      std::cout << std::endl;
+        std::cout << "size1: " << _dst_by_time->size() << std::endl;
+        std::cout << "capacity1: " << _dst_by_time->capacity() << std::endl;
+        std::cout << "overage1: " << overage(*_dst_by_time) << "%" << std::endl;
+        std::cout << "size2: " << _dst_by_type->size() << std::endl;
+        std::cout << "capacity2: " << _dst_by_type->capacity() << std::endl;
+        std::cout << "overage2: " << overage(*_dst_by_type) << "%" << std::endl;
+        std::cout << "size3: " << _src_by_time->size() << std::endl;
+        std::cout << "capacity3: " << _src_by_time->capacity() << std::endl;
+        std::cout << "overage3: " << overage(*_src_by_time) << "%" << std::endl;
+        std::cout << std::endl;
+      }
     }
+    /*else if ( (i % (COUNT/10)) == 0 )
+    {
+      finish = fas::process_nanotime();
+      std::cout << "(" << finish - start << ") " << i / COUNT << " млн : " << finish - start  << ", " << COUNT * fas::rate(finish - start) << " persec" << std::endl;
+      start = finish;
+    }*/
+
 
     /*
     hit hi;
@@ -191,14 +170,15 @@ void test_hitlist()
     */
 
     main_container::pointer ptr = _main->allocate(1);
+    // hit *ptr = new hit;
     ptr->src = rand() % 1000000;
     ptr->dst = rand() % 1000000;
     ptr->hittime = now - (last_time + time_step*i);
     ptr->type_id = rand() % 3;
 
-    _dst_by_time->insert(ptr);
-    _dst_by_type->insert(ptr);
-    _src_by_time->insert(ptr);
+    _dst_by_time->insert( size_t(ptr) );
+    _dst_by_type->insert( size_t(ptr) );
+    _src_by_time->insert( size_t(ptr) );
 
     
     /*
@@ -214,25 +194,26 @@ void test_hitlist()
 int main(int argc, char* argv[])
 {
   mmap_buffer main_buffer;
-  main_buffer.open("hitlist.bin", MAX_BUFFER);
+  if ( !main_buffer.open("hitlist.bin", MAX_BUFFER) )
+    return 1;
   _main = new main_container(main_buffer);
 
   _dst_by_time_buffer = new  dst_by_type_helper::buffer_type;
   _dst_by_time_buffer->open("hitlist1.bin", MAX_BUFFER);
   dst_by_time_helper::memory_manager* dst_by_time_manager = new dst_by_time_helper::memory_manager(*_dst_by_time_buffer);
   std::cout << "restore1..." << std::endl;
-  _dst_by_time = new dst_by_time_index( dst_by_time_helper::comparator(main_buffer), *dst_by_time_manager );
+  _dst_by_time = new dst_by_time_index( dst_by_time_helper::comparator(main_buffer) , *dst_by_time_manager );
   std::cout << "...restore1" << std::endl;
 
-  // dst_by_type_helper::buffer_type dst_by_type_buffer;
+  dst_by_type_helper::buffer_type dst_by_type_buffer;
   _dst_by_type_buffer = new dst_by_type_helper::buffer_type;
   _dst_by_type_buffer->open("hitlist2.bin", MAX_BUFFER);
   dst_by_type_helper::memory_manager* dst_by_type_manager = new dst_by_type_helper::memory_manager(*_dst_by_type_buffer);
   std::cout << "restore2..." << std::endl;
-  _dst_by_type = new dst_by_type_index( dst_by_type_helper::comparator(main_buffer), *dst_by_type_manager );
+  _dst_by_type = new dst_by_type_index( dst_by_type_helper::comparator(main_buffer) , *dst_by_type_manager );
   std::cout << "...restore2" << std::endl;
 
-  // src_by_time_helper::buffer_type src_by_time_buffer;
+   src_by_time_helper::buffer_type src_by_time_buffer;
   _src_by_time_buffer = new src_by_time_helper::buffer_type;
   _src_by_time_buffer->open("hitlist3.bin", MAX_BUFFER);
   src_by_time_helper::memory_manager* src_by_time_manager = new src_by_time_helper::memory_manager(*_src_by_time_buffer);

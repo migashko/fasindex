@@ -1,5 +1,5 @@
-#ifndef MMAP_BUFFER_HPP
-#define MMAP_BUFFER_HPP
+#ifndef MEM_BUFFER_HPP
+#define MEM_BUFFER_HPP
 
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -14,23 +14,23 @@
 //#include <string.h>
 #include <cstring>
 
-class mmap_buffer
+class mem_buffer
   : public buffer_base
 {
 public:
-  ~mmap_buffer()
+  ~mem_buffer()
   {
     this->close();
   }
 
-  mmap_buffer()
-    : buffer_base( static_cast<char*>(MAP_FAILED), 0 )
+  mem_buffer()
+    : buffer_base( 0, 0 )
     , _fd(-1)
   {
   }
 
-  mmap_buffer(const char* path, size_t size = 0)
-    : buffer_base(static_cast<char*>(MAP_FAILED), 0 )
+  mem_buffer(const char* path, size_t size = 0)
+    : buffer_base(0, 0 )
     , _fd(-1)
   {
     this->open( path, size );
@@ -38,12 +38,7 @@ public:
 
   void close()
   {
-    if ( _addr!=MAP_FAILED )
-    {
-      if ( -1 == ::msync( _addr, _size, MS_SYNC ) )
-        std::cout << "mmap_buffer::msync fail" << std::endl;
-      ::munmap( _addr, _size );
-    }
+    this->sync(false);
 
     if (_fd!=-1)
       ::close( _fd );
@@ -54,7 +49,7 @@ public:
   bool open(const char* path, size_t size = 0)
   {
 
-    _fd = ::open(path, O_RDWR | O_CREAT, /*(mode_t)0600*/ S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH );
+    _fd = ::open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH );
 
     if ( _fd == -1)
       return false;
@@ -68,16 +63,6 @@ public:
 
     if ( size < static_cast<size_t>(sb.st_size))
       size = sb.st_size;
-
-    if ( size > static_cast<size_t>(sb.st_size) )
-    {
-      if ( -1 == lseek(_fd, size-1, SEEK_SET) )
-      {
-        this->close();
-        return false;
-      }
-      ::write(_fd, "", 1);
-    }
 
     /*
     MAP_HUGETLB (since Linux 2.6.32)
@@ -95,11 +80,9 @@ public:
     */
 
     
-    _addr = (char*)::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | /*MAP_PRIVATE |*/ MAP_NORESERVE |  MAP_POPULATE /*| MAP_HUGETLB */ /*| MAP_HUGETLB*/ /*|  */ /*| MAP_NORESERVE*/, _fd, 0);
+    _addr = new char[size];
 
-    
-
-    if (_addr == MAP_FAILED)
+    if (_addr == 0)
     {
       int err = errno;
       this->close();
@@ -107,12 +90,10 @@ public:
       return false;
     }
 
+    lseek(_fd, 0, SEEK_SET);
+    ::read( _fd, _addr, size);
+    
     _size = size;
-    if ( -1 == ::msync(_addr, _size, MS_SYNC) )
-    {
-      this->close();
-      return false;
-    }
     return true;
   }
 
@@ -126,7 +107,14 @@ public:
 
   bool resize(size_t size)
   {
-    //std::cout << "resize: " << size << std::endl;
+    this->sync(false);
+    delete[] _addr;
+    _addr = new char[size];
+    lseek(_fd, 0, SEEK_SET);
+    ::read( _fd, _addr, size);
+    _size = size;
+
+    /*
     if (size > _size)
     {
       if ( -1 == ::lseek(_fd, size-1, SEEK_SET) )
@@ -142,7 +130,7 @@ public:
     _addr = (char*) ::mremap( _addr, _size, size, MREMAP_MAYMOVE);
     if ( _addr == MAP_FAILED )
       return false;
-    _size = size;
+    _size = size;*/
     return true;
   }
 
@@ -153,7 +141,8 @@ public:
 
   void sync( bool async = false )
   {
-    ::msync(_addr, _size, async ? MS_ASYNC : MS_SYNC);
+    lseek(_fd, 0, SEEK_SET);
+    ::write( _fd, _addr, _size);
   }
 
 private:

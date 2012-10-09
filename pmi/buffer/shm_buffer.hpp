@@ -1,5 +1,5 @@
-#ifndef MMAP_BUFFER_HPP
-#define MMAP_BUFFER_HPP
+#ifndef SHM_BUFFER_HPP
+#define SHM_BUFFER_HPP
 
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -51,7 +51,7 @@ public:
   }
 
  
-  bool open(const char* path, size_t size = 0)
+  bool open_mmap(const char* path, size_t size = 0)
   {
 
     _fd = ::open(path, O_RDWR | O_CREAT, /*(mode_t)0600*/ S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH );
@@ -95,7 +95,7 @@ public:
     */
 
     
-    _addr = (char*)::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | /*MAP_PRIVATE |*/ MAP_NORESERVE |  MAP_POPULATE /*| MAP_HUGETLB */ /*| MAP_HUGETLB*/ /*|  */ /*| MAP_NORESERVE*/, _fd, 0);
+    _addr = (char*)::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | /*MAP_PRIVATE |*/ /*MAP_NORESERVE |*/  MAP_POPULATE /*| MAP_HUGETLB */ /*| MAP_HUGETLB*/ /*|  */ /*| MAP_NORESERVE*/, _fd, 0);
 
     
 

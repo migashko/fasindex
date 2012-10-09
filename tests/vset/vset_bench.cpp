@@ -1,4 +1,5 @@
 #include <pmi/vset.hpp>
+#include <pmi/buffer/mem_buffer.hpp>
 #include <fas/xtime.hpp>
 #include <climits>
 #include <limits>
